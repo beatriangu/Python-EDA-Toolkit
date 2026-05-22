@@ -2,21 +2,27 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-def mapa_correlaciones(df, figsize=(12, 8), cmap="coolwarm", annot=True, title="Mapa de correlaciones"):
-    """
-    Muestra un mapa de calor con las correlaciones entre variables numéricas.
-    """
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+def mapa_correlaciones(df, figsize=(14,10)):
     corr = df.corr(numeric_only=True)
 
+    mask = np.triu(np.ones_like(corr, dtype=bool))
+
     plt.figure(figsize=figsize)
+
     sns.heatmap(
         corr,
-        annot=annot,
-        cmap=cmap,
+        mask=mask,
+        annot=True,
         fmt=".2f",
+        cmap="coolwarm",
         linewidths=0.5
     )
-    plt.title(title)
+
+    plt.title("Correlation Heatmap")
     plt.show()
 
 
