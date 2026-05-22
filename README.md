@@ -1,140 +1,142 @@
-# 🧰 Python-EDA-Toolkit
+# 🧰 Python EDA Toolkit
 
-Reusable Python utilities for Data Analysis, Visualization and Machine Learning.
+Reusable Python toolkit for Exploratory Data Analysis (EDA), Data Visualization and Machine Learning workflows.
 
-Ayudante is a personal helper package designed to simplify common workflows in:
+Python EDA Toolkit is a modular collection of reusable utilities designed to simplify and accelerate common Data Science tasks across notebooks, experiments and Machine Learning projects.
 
-- 📊 Exploratory Data Analysis (EDA)
-- 📈 Data Visualization
-- 🤖 Machine Learning
-- 📉 Regression & Classification evaluation
-- 🧹 Data preprocessing
-- ☁️ Google Colab workflows
-
-The goal of this repository is to avoid rewriting the same code across notebooks and projects, while building a clean and reusable Data Science toolkit.
+The goal of this repository is to avoid rewriting repetitive code while building a clean, maintainable and professional toolkit for real-world analytical workflows.
 
 ---
 
-# 🚀 How to Use Ayudante
+# 🚀 Features
 
-There are **two ways** to work with this repository depending on your needs.
+## 📊 Exploratory Data Analysis (EDA)
+- Dataset summaries
+- Missing value analysis
+- Data type inspection
+- Statistical overviews
+- Categorical variable exploration
+
+## 📈 Visualization Utilities
+- Correlation heatmaps
+- Histograms
+- Boxplots
+- Countplots
+- Prediction comparison plots
+- Reusable plotting helpers
+
+## 🤖 Machine Learning Support
+- Regression evaluation metrics
+- Classification reports
+- Confusion matrices
+- Model comparison utilities
+- Prediction visualization
+
+## 🧹 Data Preprocessing
+- Train/test split helpers
+- Scaling utilities
+- Encoding functions
+- Feature preparation workflows
+
+## ☁️ Notebook Friendly
+- Optimized for Google Colab
+- Easy notebook integration
+- Reusable across Kaggle and local environments
 
 ---
 
-# ☁️ Option 1 — Quick Use in Google Colab (Recommended)
+# 📦 Installation
 
-## ✅ Best if you only want to USE the functions
+## 🔹 Option 1 — Quick Install from GitHub (Recommended)
 
-Perfect for:
-- Google Colab notebooks
-- Kaggle notebooks
-- quick projects
-- EDA workflows
-- Machine Learning practice
+Best when you only want to **use the toolkit** in notebooks or projects.
 
----
+```bash
+pip install git+https://github.com/beatriangu/Python-EDA-Toolkit.git
+✅ Recommended for:
+Google Colab
+Kaggle
+Quick EDA workflows
+Machine Learning practice
+Data Analysis projects
+✅ Advantages
+Fast setup
+No cloning required
+Dependencies installed automatically
+Ready to use immediately
 
-## 📦 Install directly from GitHub
+Example:
 
-```python
-!pip install git+https://github.com/beatriangu/Ayudante.git
-📥 Import functions
-from ayudante import (
-    resumen_dataset,
-    valores_nulos,
-    mapa_correlaciones,
-    histograma,
-    boxplot,
-    countplot,
-    valor_real_predicho,
-    matriz_confusion,
-    reporte_clasificacion,
-    comparar_modelos_clasificacion,
-    metricas_regresion,
-)
-✅ Why use this approach?
+from python_eda_toolkit.visualization.plots import mapa_correlaciones
 
-Using:
+mapa_correlaciones(df)
+🔹 Option 2 — Clone Repository for Development
 
-!pip install git+...
+Best when you want to:
 
-automatically:
-
-downloads the repository
-executes setup.py
-installs dependencies
-makes all modules importable
-
-without manually cloning folders.
-
-🛠️ Option 2 — Clone and Modify the Package
-✅ Best if you want to EDIT or CREATE new functions
-
-Perfect for:
-
-developing the package
-experimenting
-renaming functions
-adding utilities
-creating your own Data Science toolkit
-📥 Clone repository
-git clone https://github.com/beatriangu/Ayudante.git
-📂 Enter project
-cd Ayudante
-🧪 Create virtual environment
+modify functions,
+create new utilities,
+contribute to the package,
+or build your own toolkit.
+Clone repository
+git clone https://github.com/beatriangu/Python-EDA-Toolkit.git
+cd Python-EDA-Toolkit
+Create virtual environment
 python3 -m venv .venv
-▶️ Activate environment
+Activate environment
 macOS / Linux
 source .venv/bin/activate
 Windows
 .venv\Scripts\activate
-📦 Install editable package
+Install editable package
 pip install -e .
-✅ Why use -e?
+✅ Why use editable mode?
 
-Editable mode means:
+Editable mode (-e) means:
 
-changes are reflected automatically
-no reinstall required after editing files
-ideal for package development
+changes are reflected instantly,
+no reinstall required after modifications,
+ideal for package development.
 
 Example:
 
+If you modify:
+
 def mapa_correlaciones():
 
-You can modify it instantly and use the updated version without reinstalling.
+the updates become immediately available in your notebooks and scripts.
 
+☁️ Google Colab Example
+!pip install git+https://github.com/beatriangu/Python-EDA-Toolkit.git
+from python_eda_toolkit.visualization.plots import mapa_correlaciones
+
+mapa_correlaciones(df)
 📂 Project Structure
-Ayudante/
-│
-├── ayudante/
-│   ├── __init__.py
-│   ├── eda.py
-│   ├── visualizaciones.py
-│   ├── regresion.py
-│   ├── clasificacion.py
-│   ├── preprocessing.py
-│   ├── modelos.py
-│   └── utils.py
+Python-EDA-Toolkit/
 │
 ├── data/
-│   ├── classification/
-│   ├── raw/
-│   └── regression/
 │
-├── setup.py
+├── images/
+│
+├── notebooks/
+│
+├── python_eda_toolkit/
+│   ├── eda/
+│   ├── visualization/
+│   ├── preprocessing/
+│   ├── models/
+│   └── utils/
+│
 ├── requirements.txt
+├── setup.py
 └── README.md
 📊 Available Utilities
-🔍 EDA
+🔍 Exploratory Data Analysis
 resumen_dataset(df)
-
 valores_nulos(df)
-
 tipos_columnas(df)
-
 resumen_categoricas(df)
-📈 Visualizations
+📈 Visualization
 mapa_correlaciones(df)
 
 histograma(df, "SalePrice")
@@ -143,31 +145,15 @@ boxplot(df, "SalePrice")
 
 countplot(df, "Class")
 📉 Regression
-valor_real_predicho(
-    y_test,
-    y_pred,
-    magnitud="precio"
-)
+metricas_regresion(y_test, y_pred)
 
-metricas_regresion(
-    y_test,
-    y_pred
-)
+valor_real_predicho(y_test, y_pred)
 🤖 Classification
-matriz_confusion(
-    y_test,
-    y_pred
-)
+matriz_confusion(y_test, y_pred)
 
-reporte_clasificacion(
-    y_test,
-    y_pred
-)
+reporte_clasificacion(y_test, y_pred)
 
-comparar_modelos_clasificacion({
-    "Logistic Regression": 0.82,
-    "Random Forest": 0.88
-})
+comparar_modelos_clasificacion(resultados)
 🧹 Preprocessing
 separar_x_y(df, target)
 
@@ -176,21 +162,56 @@ dividir_train_test(X, y)
 escalar_train_test(X_train, X_test)
 
 label_encode_columna(df, columna)
-🎯 Purpose
+🎯 Project Goals
 
-This project is designed as a reusable toolkit for:
+This repository is designed to:
 
-Exploratory Data Analysis
-Data Visualization
-Machine Learning workflows
-Regression evaluation
-Classification evaluation
-Data preprocessing
-Google Colab reusable utilities
-Educational and portfolio projects
+Improve workflow efficiency in Data Science projects
+Centralize reusable utilities
+Standardize EDA and ML processes
+Accelerate experimentation
+Reduce repetitive notebook code
+Build a scalable and maintainable toolkit
+Showcase professional Python and Machine Learning practices
+🧪 Technologies
+Python
+Pandas
+NumPy
+Matplotlib
+Seaborn
+Scikit-learn
+SciPy
+XGBoost
+LightGBM
+Jupyter Notebook
+💡 Future Improvements
+
+Planned future additions include:
+
+KNN utilities
+Decision Tree helpers
+Random Forest workflows
+XGBoost pipelines
+Feature engineering utilities
+Automated reporting
+Streamlit integration
+Model persistence utilities
+Advanced visualization dashboards
 👩‍💻 Author
-Bea Lamiquiz
+Beatriz Lamiquiz
 
-Python | Data Analysis | Machine Learning | Django | AI applied to real-world projects
+Python • Data Analysis • Machine Learning • Django • AI
 
-🔗 GitHub: https://github.com/beatriangu
+Passionate about building practical, reusable and scalable solutions using Python, Data Science and Artificial Intelligence.
+
+🔗 GitHub
+https://github.com/beatriangu
+
+⭐ Support
+
+If you find this project useful:
+
+Star the repository
+Fork it
+Contribute improvements
+Use it in your own Data Science projects
