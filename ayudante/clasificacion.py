@@ -3,12 +3,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn.metrics import (
-    accuracy_score,
     classification_report,
-    confusion_matrix,
-    mean_absolute_error,
-    mean_squared_error,
-    r2_score
+    confusion_matrix
 )
 
 
@@ -27,6 +23,7 @@ def matriz_confusion(y_test, y_pred, labels=None, figsize=(8, 6), title="Matriz 
         xticklabels=labels,
         yticklabels=labels
     )
+
     plt.title(title)
     plt.xlabel("Predicción")
     plt.ylabel("Valor real")
@@ -50,15 +47,3 @@ def comparar_modelos_clasificacion(resultados):
     })
 
     return df_resultados.sort_values(by="Accuracy", ascending=False)
-
-
-def metricas_regresion(y_test, y_pred):
-    """
-    Devuelve métricas principales de regresión.
-    """
-    return {
-        "MAE": mean_absolute_error(y_test, y_pred),
-        "MSE": mean_squared_error(y_test, y_pred),
-        "RMSE": mean_squared_error(y_test, y_pred) ** 0.5,
-        "R2": r2_score(y_test, y_pred),
-    }

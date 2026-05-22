@@ -1,24 +1,48 @@
 # 🧰 Ayudante
 
-Reusable Python utilities for data analysis, visualization and Machine Learning.
+Reusable Python utilities for Data Analysis, Visualization and Machine Learning.
 
-This repository contains helper functions created during practical Machine Learning projects in Python.  
-The goal is to avoid repeating code and make common EDA, visualization and model evaluation tasks easier to reuse across notebooks, scripts and Google Colab projects.
+Ayudante is a personal helper package designed to simplify common workflows in:
+
+- 📊 Exploratory Data Analysis (EDA)
+- 📈 Data Visualization
+- 🤖 Machine Learning
+- 📉 Regression & Classification evaluation
+- 🧹 Data preprocessing
+- ☁️ Google Colab workflows
+
+The goal of this repository is to avoid rewriting the same code across notebooks and projects, while building a clean and reusable Data Science toolkit.
 
 ---
 
-# 📦 Installation from GitHub
+# 🚀 How to Use Ayudante
 
-In Google Colab:
+There are **two ways** to work with this repository depending on your needs.
+
+---
+
+# ☁️ Option 1 — Quick Use in Google Colab (Recommended)
+
+## ✅ Best if you only want to USE the functions
+
+Perfect for:
+- Google Colab notebooks
+- Kaggle notebooks
+- quick projects
+- EDA workflows
+- Machine Learning practice
+
+---
+
+## 📦 Install directly from GitHub
 
 ```python
 !pip install git+https://github.com/beatriangu/Ayudante.git
-
-Then import:
-
-from visualizaciones import (
+📥 Import functions
+from ayudante import (
+    resumen_dataset,
+    valores_nulos,
     mapa_correlaciones,
-    correlacion_con_target,
     histograma,
     boxplot,
     countplot,
@@ -28,35 +52,97 @@ from visualizaciones import (
     comparar_modelos_clasificacion,
     metricas_regresion,
 )
+✅ Why use this approach?
+
+Using:
+
+!pip install git+...
+
+automatically:
+
+downloads the repository
+executes setup.py
+installs dependencies
+makes all modules importable
+
+without manually cloning folders.
+
+🛠️ Option 2 — Clone and Modify the Package
+✅ Best if you want to EDIT or CREATE new functions
+
+Perfect for:
+
+developing the package
+experimenting
+renaming functions
+adding utilities
+creating your own Data Science toolkit
+📥 Clone repository
+git clone https://github.com/beatriangu/Ayudante.git
+📂 Enter project
+cd Ayudante
+🧪 Create virtual environment
+python3 -m venv .venv
+▶️ Activate environment
+macOS / Linux
+source .venv/bin/activate
+Windows
+.venv\Scripts\activate
+📦 Install editable package
+pip install -e .
+✅ Why use -e?
+
+Editable mode means:
+
+changes are reflected automatically
+no reinstall required after editing files
+ideal for package development
+
+Example:
+
+def mapa_correlaciones():
+
+You can modify it instantly and use the updated version without reinstalling.
+
 📂 Project Structure
 Ayudante/
-├── data/
-│   ├── eda/
-│   └── ml/
-├── visualizaciones/
-│   ├── correlaciones.py
-│   ├── distribuciones.py
-│   ├── regresiones.py
+│
+├── ayudante/
+│   ├── __init__.py
+│   ├── eda.py
+│   ├── visualizaciones.py
+│   ├── regresion.py
+│   ├── clasificacion.py
+│   ├── preprocessing.py
 │   ├── modelos.py
-│   └── __init__.py
+│   └── utils.py
+│
+├── data/
+│   ├── classification/
+│   ├── raw/
+│   └── regression/
+│
 ├── setup.py
 ├── requirements.txt
 └── README.md
 📊 Available Utilities
-Correlations
+🔍 EDA
+resumen_dataset(df)
+
+valores_nulos(df)
+
+tipos_columnas(df)
+
+resumen_categoricas(df)
+📈 Visualizations
 mapa_correlaciones(df)
 
-correlacion_con_target(
-    df,
-    target="SalePrice"
-)
-Distributions
 histograma(df, "SalePrice")
 
 boxplot(df, "SalePrice")
 
 countplot(df, "Class")
-Regression
+📉 Regression
 valor_real_predicho(
     y_test,
     y_pred,
@@ -67,7 +153,7 @@ metricas_regresion(
     y_test,
     y_pred
 )
-Classification
+🤖 Classification
 matriz_confusion(
     y_test,
     y_pred
@@ -82,20 +168,29 @@ comparar_modelos_clasificacion({
     "Logistic Regression": 0.82,
     "Random Forest": 0.88
 })
+🧹 Preprocessing
+separar_x_y(df, target)
+
+dividir_train_test(X, y)
+
+escalar_train_test(X_train, X_test)
+
+label_encode_columna(df, columna)
 🎯 Purpose
 
-This project is designed as a personal helper package for:
+This project is designed as a reusable toolkit for:
 
 Exploratory Data Analysis
-Data visualization
-Regression model evaluation
-Classification model evaluation
-Reusable Machine Learning workflows
+Data Visualization
+Machine Learning workflows
+Regression evaluation
+Classification evaluation
+Data preprocessing
 Google Colab reusable utilities
+Educational and portfolio projects
 👩‍💻 Author
-
 Bea Lamiquiz
 
 Python | Data Analysis | Machine Learning | Django | AI applied to real-world projects
 
-
+🔗 GitHub: https://github.com/beatriangu
