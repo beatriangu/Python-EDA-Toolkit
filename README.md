@@ -1,4 +1,4 @@
-# 🧰 Ayudante
+# 🧰 Python-EDA-Toolkit
 
 Reusable Python utilities for Data Analysis, Visualization and Machine Learning.
 
