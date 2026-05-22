@@ -1,8 +1,7 @@
-cat > .gitignore <<'EOF'
 .DS_Store
 __pycache__/
 *.pyc
 .venv/
 venv/
 .ipynb_checkpoints/
-EOF
+*.egg-info/
