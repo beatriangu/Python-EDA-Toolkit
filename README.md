@@ -2,9 +2,77 @@
 
 Reusable Python toolkit for Exploratory Data Analysis (EDA), Data Visualization and Machine Learning workflows.
 
-Python EDA Toolkit is a modular collection of reusable utilities designed to simplify, standardize and accelerate common Data Science workflows across notebooks, experiments and Machine Learning projects.
+Python EDA Toolkit is a modular and reusable collection of utilities designed to simplify, standardize and accelerate real-world Data Science workflows across notebooks, experiments and Machine Learning projects.
 
-The goal of this repository is to eliminate repetitive notebook code while building a clean, maintainable and production-friendly toolkit for real-world analytical workflows.
+Unlike traditional utility collections, the toolkit not only provides reusable functions, but also helps guide the analysis process through lightweight intelligent recommendations based on the structure and characteristics of each dataset.
+
+The toolkit can automatically:
+
+* Inspect dataset structure
+* Detect column types
+* Identify missing values and duplicates
+* Suggest preprocessing steps
+* Recommend visualizations
+* Infer Machine Learning problem types
+* Recommend baseline model families
+
+The goal is not to replace the data scientist, but to reduce repetitive decision-making and provide a smarter starting point for exploratory analysis and model development.
+
+Designed to remain lightweight, explainable and reusable, the toolkit can adapt to many different datasets and analytical workflows.
+
+---
+
+# 🚀 Intelligent Dataset Analysis
+
+```python
+import pandas as pd
+
+from python_eda_toolkit.smart import (
+    analyze_dataset,
+)
+
+df = pd.read_csv("data.csv")
+
+analysis = analyze_dataset(
+    df,
+    target="price",
+)
+
+print(analysis)
+```
+
+Example output:
+
+```python
+{
+    "dataset_shape": {
+        "rows": 1460,
+        "columns": 81
+    },
+
+    "suggested_problem_type":
+        "The target is numerical. This is likely a regression problem.",
+
+    "preprocessing_recommendations": [
+        "Missing values detected.",
+        "Categorical columns detected.",
+        "Consider scaling numerical features."
+    ],
+
+    "visualization_recommendations": [
+        "Use a correlation heatmap.",
+        "Use histograms and boxplots."
+    ],
+
+    "model_recommendations": [
+        "Start with DummyRegressor as a baseline.",
+        "Try Linear Regression.",
+        "Try RandomForestRegressor."
+    ]
+}
+```
+
+The toolkit helps guide the workflow by recommending appropriate preprocessing steps, visualizations and baseline models depending on the dataset structure.
 
 ---
 
@@ -30,7 +98,7 @@ The goal of this repository is to eliminate repetitive notebook code while build
 * Countplots
 * Prediction comparison plots
 * Reusable plotting helpers
-* Clean and notebook-friendly visualizations
+* Notebook-friendly visualizations
 
 ---
 
@@ -43,7 +111,6 @@ The goal of this repository is to eliminate repetitive notebook code while build
 * Robust Scaling
 * One-Hot Encoding
 * Label Encoding
-* Reusable preprocessing helpers
 
 ---
 
@@ -72,41 +139,34 @@ The goal of this repository is to eliminate repetitive notebook code while build
 
 ---
 
-## ☁️ Notebook Friendly
+## 🧠 Smart Recommendations
 
-Optimized for:
+The `smart` module analyzes datasets and provides lightweight intelligent recommendations for:
 
-* Google Colab
-* Kaggle
-* Jupyter Notebook
-* Local development environments
+* Preprocessing
+* Visualization
+* Baseline model selection
+* Problem type detection
+
+The recommendations are rule-based, explainable and designed to assist — not replace — the data scientist.
 
 ---
 
 # 🚀 Installation
 
-## 🔹 Option 1 — Quick Install from GitHub (Recommended)
-
-Best when you only want to use the toolkit in notebooks or projects.
+## Quick Install from GitHub
 
 ```bash
 pip install git+https://github.com/beatriangu/Python-EDA-Toolkit.git
 ```
 
-### ✅ Recommended for
+Recommended for:
 
 * Google Colab
 * Kaggle
-* Quick EDA workflows
-* Machine Learning practice
-* Data Analysis projects
-
-### ✅ Advantages
-
-* Fast setup
-* No cloning required
-* Dependencies installed automatically
-* Ready to use immediately
+* Jupyter Notebook
+* Quick Machine Learning workflows
+* Educational and personal projects
 
 ---
 
@@ -134,77 +194,16 @@ correlation_heatmap(df)
 
 ---
 
-# 🔧 Development Installation
-
-Best when you want to:
-
-* Modify functions
-* Create new utilities
-* Contribute to the package
-* Build your own toolkit
-
----
-
-## 1️⃣ Clone Repository
-
-```bash
-git clone https://github.com/beatriangu/Python-EDA-Toolkit.git
-
-cd Python-EDA-Toolkit
-```
-
----
-
-## 2️⃣ Create Virtual Environment
-
-```bash
-python3 -m venv .venv
-```
-
----
-
-## 3️⃣ Activate Environment
-
-### macOS / Linux
-
-```bash
-source .venv/bin/activate
-```
-
-### Windows
-
-```bash
-.venv\Scripts\activate
-```
-
----
-
-## 4️⃣ Install Editable Package
-
-```bash
-pip install -e .
-```
-
-### ✅ Why use editable mode?
-
-Editable mode (`-e`) means:
-
-* Changes are reflected instantly
-* No reinstall required after modifications
-* Ideal for package development
-
----
-
 # ☁️ Google Colab Example
 
 ```python
 !pip install git+https://github.com/beatriangu/Python-EDA-Toolkit.git
 
-from python_eda_toolkit.visualization.plots import (
-    correlation_heatmap,
+from python_eda_toolkit.smart import (
+    analyze_dataset,
 )
 
-correlation_heatmap(df)
+analysis = analyze_dataset(df)
 ```
 
 ---
@@ -215,19 +214,16 @@ correlation_heatmap(df)
 Python-EDA-Toolkit/
 │
 ├── data/
-│
-├── images/
-│
 ├── notebooks/
+├── tests/
 │
 ├── python_eda_toolkit/
 │   ├── eda/
-│   ├── visualization/
-│   ├── preprocessing/
 │   ├── models/
-│   └── utils/
-│
-├── tests/
+│   ├── preprocessing/
+│   ├── smart/
+│   ├── utils/
+│   └── visualization/
 │
 ├── requirements.txt
 ├── setup.py
@@ -236,42 +232,36 @@ Python-EDA-Toolkit/
 
 ---
 
-# 📊 Available Utilities
+# 📊 Example Utilities
 
-## 🔍 EDA
+## EDA
 
 ```python
-data_overview(df)
-
-column_overview(df)
+generate_eda_report(df)
 
 missing_summary(df)
 
-generate_eda_report(df)
+column_overview(df)
 ```
 
 ---
 
-## 📈 Visualization
+## Visualization
 
 ```python
 correlation_heatmap(df)
 
-histogram(df, "SalePrice")
+histogram(df, "price")
 
-boxplot(df, "SalePrice")
-
-countplot(df, "Category")
+boxplot(df, "price")
 ```
 
 ---
 
-## 🧹 Preprocessing
+## Preprocessing
 
 ```python
 detect_outliers_iqr(df, "salary")
-
-remove_outliers_iqr(df, "salary")
 
 standard_scale(df, ["age", "salary"])
 
@@ -280,17 +270,11 @@ one_hot_encode(df, ["city"])
 
 ---
 
-## 🤖 Model Evaluation
-
-### Regression
+## Model Evaluation
 
 ```python
 regression_metrics(y_true, y_pred)
-```
 
-### Classification
-
-```python
 classification_metrics(y_true, y_pred)
 
 confusion_matrix_df(y_true, y_pred)
@@ -298,7 +282,7 @@ confusion_matrix_df(y_true, y_pred)
 
 ---
 
-## ⚡ Baseline Models
+## Baseline Models
 
 ```python
 train_regression_baseline(df, target="price")
@@ -323,14 +307,12 @@ train_classification_baseline(df, target="target")
 
 # 🎯 Project Goals
 
-This repository is designed to:
-
-* Improve workflow efficiency in Data Science projects
-* Centralize reusable utilities
+* Reduce repetitive notebook code
 * Standardize EDA and ML workflows
 * Accelerate experimentation
-* Reduce repetitive notebook code
-* Build scalable and maintainable utilities
+* Build reusable utilities
+* Create explainable smart recommendations
+* Improve workflow efficiency
 * Showcase professional Python and Machine Learning practices
 
 ---
@@ -342,14 +324,13 @@ Planned future additions include:
 * Interactive Plotly visualizations
 * Feature importance utilities
 * Automated HTML reports
-* Pipeline builders
 * AutoML starter workflows
+* Pipeline builders
 * Streamlit integration
 * Model persistence helpers
-* Feature selection utilities
-* Time series helpers
+* Feature engineering utilities
 * CLI commands
-* Full documentation website
+* Documentation website
 
 ---
 
@@ -357,9 +338,9 @@ Planned future additions include:
 
 ✅ Modular architecture
 ✅ Reusable utilities
-✅ Fully tested components
+✅ Smart dataset recommendations
 ✅ Automatic EDA reports
-✅ Machine Learning evaluation helpers
+✅ Fully tested components
 ✅ Notebook-friendly design
 
 ---
@@ -367,7 +348,7 @@ Planned future additions include:
 # 📈 Test Status
 
 ```text
-42 tests passing
+49 tests passing
 ```
 
 ---
@@ -382,12 +363,6 @@ Passionate about building practical, reusable and scalable solutions using Pytho
 
 ---
 
-# 🔗 GitHub
-
-https://github.com/beatriangu
-
----
-
 # ⭐ Support
 
 If you find this project useful:
@@ -396,3 +371,4 @@ If you find this project useful:
 * 🍴 Fork it
 * 🚀 Contribute improvements
 * 📊 Use it in your own Data Science projects
+
