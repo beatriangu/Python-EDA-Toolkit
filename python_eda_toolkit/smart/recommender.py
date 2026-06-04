@@ -21,16 +21,6 @@ from python_eda_toolkit.utils.validators import validate_dataframe
 def detect_column_types(df: pd.DataFrame) -> dict[str, list[str]]:
     """
     Detect basic column groups in a DataFrame.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input DataFrame.
-
-    Returns
-    -------
-    dict[str, list[str]]
-        Dictionary with numerical, categorical, boolean and datetime columns.
     """
     validate_dataframe(df)
 
@@ -58,6 +48,45 @@ def detect_column_types(df: pd.DataFrame) -> dict[str, list[str]]:
     }
 
 
+def detect_identifier_columns(
+    df: pd.DataFrame,
+    uniqueness_threshold: float = 0.9,
+) -> list[str]:
+    """
+    Detect columns that may behave like identifiers.
+
+    Identifier-like columns usually have very high cardinality
+    or names commonly associated with identifiers.
+    """
+    validate_dataframe(df)
+
+    if len(df) == 0:
+        return []
+
+    identifier_keywords = [
+        "id",
+        "uuid",
+        "name",
+        "code",
+        "index",
+    ]
+
+    identifier_columns = []
+
+    for column in df.columns:
+        unique_ratio = df[column].nunique(dropna=False) / len(df)
+
+        has_identifier_name = any(
+            keyword in column.lower()
+            for keyword in identifier_keywords
+        )
+
+        if unique_ratio >= uniqueness_threshold or has_identifier_name:
+            identifier_columns.append(column)
+
+    return identifier_columns
+
+
 def suggest_preprocessing(df: pd.DataFrame) -> list[str]:
     """
     Suggest preprocessing steps based on dataset characteristics.
@@ -66,8 +95,16 @@ def suggest_preprocessing(df: pd.DataFrame) -> list[str]:
 
     recommendations = []
     column_types = detect_column_types(df)
+    identifier_columns = detect_identifier_columns(df)
 
     missing_percentage = df.isnull().mean() * 100
+
+    if identifier_columns:
+        recommendations.append(
+            "Potential identifier-like columns detected: "
+            f"{identifier_columns}. Consider removing them before modeling "
+            "if they do not contain meaningful predictive information."
+        )
 
     if missing_percentage.sum() > 0:
         recommendations.append(
@@ -75,7 +112,13 @@ def suggest_preprocessing(df: pd.DataFrame) -> list[str]:
             "and applying an appropriate imputation or removal strategy."
         )
 
-    if column_types["categorical"]:
+    usable_categorical_columns = [
+        column
+        for column in column_types["categorical"]
+        if column not in identifier_columns
+    ]
+
+    if usable_categorical_columns:
         recommendations.append(
             "Categorical columns detected. Consider applying one-hot encoding "
             "or label encoding before modeling."
@@ -89,7 +132,7 @@ def suggest_preprocessing(df: pd.DataFrame) -> list[str]:
 
     high_cardinality_columns = [
         column
-        for column in column_types["categorical"]
+        for column in usable_categorical_columns
         if df[column].nunique(dropna=False) > 20
     ]
 
@@ -119,6 +162,13 @@ def suggest_visualizations(df: pd.DataFrame) -> list[str]:
 
     recommendations = []
     column_types = detect_column_types(df)
+    identifier_columns = detect_identifier_columns(df)
+
+    usable_categorical_columns = [
+        column
+        for column in column_types["categorical"]
+        if column not in identifier_columns
+    ]
 
     if len(column_types["numerical"]) >= 2:
         recommendations.append(
@@ -132,7 +182,7 @@ def suggest_visualizations(df: pd.DataFrame) -> list[str]:
             "and outliers."
         )
 
-    if column_types["categorical"]:
+    if usable_categorical_columns:
         recommendations.append(
             "Use countplots to inspect categorical variable distributions."
         )
@@ -235,6 +285,7 @@ def analyze_dataset(
             "columns": df.shape[1],
         },
         "detected_column_types": detect_column_types(df),
+        "identifier_like_columns": detect_identifier_columns(df),
         "suggested_problem_type": suggest_model_type(df, target),
         "preprocessing_recommendations": suggest_preprocessing(df),
         "visualization_recommendations": suggest_visualizations(df),
