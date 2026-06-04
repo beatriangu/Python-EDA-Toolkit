@@ -4,15 +4,25 @@ Preprocessing module.
 Reusable preprocessing utilities for machine learning workflows.
 
 This package provides tools for:
+- Data loading
 - Outlier detection and handling
 - Feature scaling and normalization
 - Categorical encoding
 - Missing value preprocessing
 - Data cleaning
 
-Designed for reusable, scalable and production-friendly
+Designed for reusable, scalable, and production-friendly
 data preprocessing pipelines.
 """
+
+# =========================================================
+# DATA LOADING UTILITIES
+# =========================================================
+
+from .loaders import (
+    load_data,
+)
+
 
 # =========================================================
 # OUTLIER UTILITIES
@@ -53,6 +63,12 @@ from .encoding import (
 # =========================================================
 
 __all__ = [
+
+    # -----------------------------------------------------
+    # Data loading utilities
+    # -----------------------------------------------------
+
+    "load_data",
 
     # -----------------------------------------------------
     # Outlier utilities

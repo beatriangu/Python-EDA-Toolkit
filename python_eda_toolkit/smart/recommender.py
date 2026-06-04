@@ -48,40 +48,45 @@ def detect_column_types(df: pd.DataFrame) -> dict[str, list[str]]:
     }
 
 
-def detect_identifier_columns(
-    df: pd.DataFrame,
-    uniqueness_threshold: float = 0.9,
-) -> list[str]:
+def detect_identifier_columns(df, unique_threshold=0.95):
     """
-    Detect columns that may behave like identifiers.
+    Detect columns that are likely identifiers.
 
-    Identifier-like columns usually have very high cardinality
-    or names commonly associated with identifiers.
+    Identifier-like columns are usually:
+    - named like id, name, code, uuid, reference
+    - text columns with almost all unique values
+
+    Numeric columns are not automatically treated as identifiers,
+    because scientific/measurement features often have many unique values.
     """
-    validate_dataframe(df)
-
-    if len(df) == 0:
-        return []
 
     identifier_keywords = [
         "id",
-        "uuid",
         "name",
         "code",
-        "index",
+        "uuid",
+        "ref",
+        "reference",
+        "identifier",
     ]
 
     identifier_columns = []
 
     for column in df.columns:
-        unique_ratio = df[column].nunique(dropna=False) / len(df)
+        column_lower = column.lower()
 
-        has_identifier_name = any(
-            keyword in column.lower()
-            for keyword in identifier_keywords
-        )
+        # Detect by column name
+        if any(keyword in column_lower for keyword in identifier_keywords):
+            identifier_columns.append(column)
+            continue
 
-        if unique_ratio >= uniqueness_threshold or has_identifier_name:
+        # Detect high-cardinality text columns only
+        unique_ratio = df[column].nunique(dropna=True) / len(df)
+
+        if (
+            df[column].dtype == "object"
+            and unique_ratio >= unique_threshold
+        ):
             identifier_columns.append(column)
 
     return identifier_columns

@@ -8,6 +8,7 @@ This package provides tools for:
 - Regression evaluation
 - Classification evaluation
 - Confusion matrix summaries
+- Automatic model comparison
 
 Designed for reusable machine learning workflows,
 rapid experimentation and model benchmarking.
@@ -20,6 +21,15 @@ rapid experimentation and model benchmarking.
 from .baseline import (
     train_regression_baseline,
     train_classification_baseline,
+)
+
+
+# =========================================================
+# MODEL COMPARISON
+# =========================================================
+
+from .compare_models import (
+    compare_models,
 )
 
 
@@ -46,6 +56,12 @@ __all__ = [
 
     "train_regression_baseline",
     "train_classification_baseline",
+
+    # -----------------------------------------------------
+    # Model comparison
+    # -----------------------------------------------------
+
+    "compare_models",
 
     # -----------------------------------------------------
     # Evaluation utilities
