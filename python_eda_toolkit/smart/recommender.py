@@ -21,19 +21,33 @@ from python_eda_toolkit.utils.validators import validate_dataframe
 def detect_column_types(df: pd.DataFrame) -> dict[str, list[str]]:
     """
     Detect basic column groups in a DataFrame.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame.
+
+    Returns
+    -------
+    dict[str, list[str]]
+        Dictionary with numerical, categorical, boolean and datetime columns.
     """
     validate_dataframe(df)
 
-    numerical_columns = df.select_dtypes(include="number").columns.tolist()
-
-    categorical_columns = df.select_dtypes(
-        include=["object", "category", "string"]
+    numerical_columns = df.select_dtypes(
+        include="number",
     ).columns.tolist()
 
-    boolean_columns = df.select_dtypes(include="bool").columns.tolist()
+    categorical_columns = df.select_dtypes(
+        include=["object", "category"],
+    ).columns.tolist()
+
+    boolean_columns = df.select_dtypes(
+        include="bool",
+    ).columns.tolist()
 
     datetime_columns = df.select_dtypes(
-        include=["datetime", "datetimetz"]
+        include=["datetime", "datetimetz"],
     ).columns.tolist()
 
     return {
@@ -108,12 +122,14 @@ def suggest_visualizations(df: pd.DataFrame) -> list[str]:
 
     if len(column_types["numerical"]) >= 2:
         recommendations.append(
-            "Use a correlation heatmap to explore relationships between numerical variables."
+            "Use a correlation heatmap to explore relationships between "
+            "numerical variables."
         )
 
     if column_types["numerical"]:
         recommendations.append(
-            "Use histograms and boxplots to inspect numerical distributions and outliers."
+            "Use histograms and boxplots to inspect numerical distributions "
+            "and outliers."
         )
 
     if column_types["categorical"]:
