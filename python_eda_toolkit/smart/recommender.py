@@ -27,7 +27,7 @@ def detect_column_types(df: pd.DataFrame) -> dict[str, list[str]]:
     numerical_columns = df.select_dtypes(include="number").columns.tolist()
 
     categorical_columns = df.select_dtypes(
-        include=["object", "category", "string", "str"]
+        include=["object", "category", "string"]
     ).columns.tolist()
 
     boolean_columns = df.select_dtypes(include="bool").columns.tolist()
