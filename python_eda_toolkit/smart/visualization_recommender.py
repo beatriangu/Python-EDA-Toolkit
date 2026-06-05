@@ -7,7 +7,7 @@ def suggest_visualizations(df, target=None):
 
     numeric_columns = df.select_dtypes(include="number").columns.tolist()
     categorical_columns = df.select_dtypes(
-        include=["object", "category", "bool"]
+        include=["object", "string", "category", "bool"]
     ).columns.tolist()
 
     if target:

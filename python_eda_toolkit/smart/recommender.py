@@ -157,7 +157,7 @@ def _is_object_like(series: pd.Series) -> bool:
     return (
         pd.api.types.is_object_dtype(series)
         or pd.api.types.is_string_dtype(series)
-        or pd.api.types.is_categorical_dtype(series)
+        or isinstance(series.dtype, pd.CategoricalDtype)
     )
 
 
