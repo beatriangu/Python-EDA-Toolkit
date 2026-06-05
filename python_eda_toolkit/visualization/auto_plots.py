@@ -1,22 +1,17 @@
 from __future__ import annotations
 
-import os
-import shutil
+import gc
+import re
 import warnings
 from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from python_eda_toolkit.visualization.style import (
-    set_plot_style,
-)
+from python_eda_toolkit.visualization.style import set_plot_style
 
-
-# =========================================================
-# GLOBAL VISUAL STYLE
-# =========================================================
 
 set_plot_style()
 
@@ -25,73 +20,79 @@ set_plot_style()
 # CONFIGURATION
 # =========================================================
 
+RANDOM_STATE = 42
+
 MAX_ROWS_FOR_MISSING_HEATMAP = 5_000
 MAX_ROWS_FOR_SCATTER = 20_000
+MAX_ROWS_FOR_HIST = 50_000
+MAX_ROWS_FOR_BOXPLOT = 30_000
+MAX_ROWS_FOR_CATEGORICAL = 50_000
+
 MAX_NUMERIC_COLUMNS = 12
 MAX_CORRELATION_COLUMNS = 15
 MAX_CATEGORICAL_COLUMNS = 6
 MAX_CATEGORIES = 15
+
+SAVE_DPI = 180
 
 
 # =========================================================
 # INTERNAL HELPERS
 # =========================================================
 
-def _save_or_show(save_path=None, show=True):
-    if save_path:
-        plt.savefig(
-            save_path,
-            dpi=300,
-            bbox_inches="tight",
-        )
-
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-
-def _pretty_name(name):
+def _pretty_name(name: Any) -> str:
     if name is None:
         return ""
-
     return str(name).replace("_", " ").title()
 
 
-def _ensure_output_dir(output_dir):
-    if output_dir:
-        Path(output_dir).mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+def _ensure_output_dir(output_dir: str | Path) -> None:
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 
-def _clean_output_dir(output_dir):
+def _clean_output_dir(output_dir: str | Path) -> None:
     output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
 
-    if output_path.exists():
-        for file in output_path.glob("*.png"):
-            file.unlink()
-
-    output_path.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    for file in output_path.glob("*.png"):
+        file.unlink()
 
 
-def _print_skip(message):
+def _path(output_dir: str | Path, filename: str, save_plots: bool) -> str | None:
+    if not save_plots:
+        return None
+    return str(Path(output_dir) / filename)
+
+
+def _print_skip(message: str) -> None:
     print(f"- Skipping {message}")
 
 
-def _path(output_dir, filename, save_plots):
-    return str(Path(output_dir) / filename) if save_plots else None
+def _save_or_show(save_path: str | None = None, show: bool = True) -> None:
+    try:
+        if save_path:
+            plt.savefig(
+                save_path,
+                dpi=SAVE_DPI,
+                bbox_inches="tight",
+            )
+
+        if show:
+            plt.show()
+        else:
+            plt.close()
+
+    finally:
+        if not show:
+            plt.close("all")
+        gc.collect()
 
 
-def _has_missing_values(df):
-    return df.isnull().sum().sum() > 0
-
-
-def _safe_sample(df, max_rows=MAX_ROWS_FOR_SCATTER, random_state=42):
+def _safe_sample(
+    df: pd.DataFrame,
+    max_rows: int,
+    random_state: int = RANDOM_STATE,
+) -> pd.DataFrame:
     if len(df) <= max_rows:
         return df
 
@@ -101,18 +102,54 @@ def _safe_sample(df, max_rows=MAX_ROWS_FOR_SCATTER, random_state=42):
     )
 
 
-def _safe_numeric_df(df, max_columns=MAX_NUMERIC_COLUMNS):
-    numeric_df = df.select_dtypes(
-        include="number",
+def _has_missing_values(df: pd.DataFrame) -> bool:
+    return int(df.isnull().sum().sum()) > 0
+
+
+def _is_identifier_column(column: str) -> bool:
+    column_lower = str(column).lower()
+
+    patterns = [
+        r"^id$",
+        r".*_id$",
+        r"uuid",
+        r"guid",
+        r"identifier",
+        r"track_id",
+        r"user_id",
+        r"item_id",
+    ]
+
+    return any(re.search(pattern, column_lower) for pattern in patterns)
+
+
+def _safe_numeric_df(
+    df: pd.DataFrame,
+    max_columns: int = MAX_NUMERIC_COLUMNS,
+    exclude: list[str] | None = None,
+) -> pd.DataFrame:
+    exclude = exclude or []
+
+    numeric_df = df.select_dtypes(include="number").drop(
+        columns=exclude,
+        errors="ignore",
     )
 
     if numeric_df.empty:
         return numeric_df
 
-    variances = numeric_df.var(
-        numeric_only=True,
-    ).sort_values(
-        ascending=False,
+    numeric_df = numeric_df.loc[
+        :,
+        numeric_df.nunique(dropna=True) > 1,
+    ]
+
+    if numeric_df.empty:
+        return numeric_df
+
+    variances = (
+        numeric_df
+        .var(numeric_only=True)
+        .sort_values(ascending=False)
     )
 
     selected_columns = variances.head(max_columns).index.tolist()
@@ -120,16 +157,24 @@ def _safe_numeric_df(df, max_columns=MAX_NUMERIC_COLUMNS):
     return numeric_df[selected_columns]
 
 
-def _top_categories(series, max_categories=MAX_CATEGORIES):
+def _top_categories(
+    series: pd.Series,
+    max_categories: int = MAX_CATEGORIES,
+) -> pd.Series:
     return (
         series
-        .astype(str)
+        .astype("string")
+        .fillna("Missing")
         .value_counts(dropna=False)
         .head(max_categories)
     )
 
 
-def _detect_task_type(df, target=None, task_type="auto"):
+def _detect_task_type(
+    df: pd.DataFrame,
+    target: str | None = None,
+    task_type: str = "auto",
+) -> str:
     if task_type != "auto":
         return task_type
 
@@ -142,7 +187,7 @@ def _detect_task_type(df, target=None, task_type="auto"):
         return "exploratory"
 
     unique_values = y.nunique(dropna=True)
-    unique_ratio = unique_values / len(y)
+    unique_ratio = unique_values / max(len(y), 1)
 
     if not pd.api.types.is_numeric_dtype(y):
         return "classification"
@@ -153,26 +198,62 @@ def _detect_task_type(df, target=None, task_type="auto"):
     return "regression"
 
 
+def _get_categorical_columns(
+    df: pd.DataFrame,
+    max_columns: int = MAX_CATEGORICAL_COLUMNS,
+) -> list[str]:
+    categorical_columns = df.select_dtypes(
+        include=["object", "string", "category", "bool"],
+    ).columns.tolist()
+
+    if not categorical_columns:
+        return []
+
+    filtered = [
+        column
+        for column in categorical_columns
+        if not _is_identifier_column(column)
+    ]
+
+    if not filtered:
+        filtered = categorical_columns
+
+    unique_counts = {
+        column: df[column].nunique(dropna=True)
+        for column in filtered
+    }
+
+    ordered_columns = sorted(
+        filtered,
+        key=lambda column: unique_counts[column],
+    )
+
+    return ordered_columns[:max_columns]
+
+
 # =========================================================
 # TARGET PLOTS
 # =========================================================
 
 def plot_target_distribution(
-    df,
-    target,
-    task_type="auto",
-    save_path=None,
-    show=True,
-):
+    df: pd.DataFrame,
+    target: str,
+    task_type: str = "auto",
+    save_path: str | None = None,
+    show: bool = True,
+) -> bool:
     if target not in df.columns:
-        raise ValueError(
-            f"Target column '{target}' not found in dataset."
-        )
+        return False
 
     detected_task = _detect_task_type(
         df=df,
         target=target,
         task_type=task_type,
+    )
+
+    sampled_df = _safe_sample(
+        df,
+        max_rows=MAX_ROWS_FOR_HIST,
     )
 
     target_label = _pretty_name(target)
@@ -181,7 +262,7 @@ def plot_target_distribution(
 
     if detected_task == "regression":
         sns.histplot(
-            data=df,
+            data=sampled_df,
             x=target,
             bins=40,
             kde=True,
@@ -197,11 +278,11 @@ def plot_target_distribution(
         plt.ylabel("Frequency")
 
     else:
-        unique_count = df[target].nunique(dropna=False)
+        unique_count = sampled_df[target].nunique(dropna=False)
 
         if unique_count > 30:
             counts = _top_categories(
-                df[target],
+                sampled_df[target],
                 max_categories=30,
             )
 
@@ -216,12 +297,12 @@ def plot_target_distribution(
                 fontsize=17,
                 fontweight="bold",
             )
-            plt.xlabel("Number of records")
+            plt.xlabel("Records")
             plt.ylabel(target_label)
 
         else:
             ax = sns.countplot(
-                data=df,
+                data=sampled_df,
                 x=target,
                 hue=target,
                 edgecolor="black",
@@ -234,12 +315,9 @@ def plot_target_distribution(
                 fontweight="bold",
             )
             plt.xlabel(target_label)
-            plt.ylabel("Number of records")
+            plt.ylabel("Records")
 
-            plt.xticks(
-                rotation=35,
-                ha="right",
-            )
+            plt.xticks(rotation=35, ha="right")
 
         for container in ax.containers:
             ax.bar_label(
@@ -256,23 +334,30 @@ def plot_target_distribution(
         show=show,
     )
 
+    return True
+
 
 def plot_target_boxplot(
-    df,
-    target,
-    save_path=None,
-    show=True,
-):
+    df: pd.DataFrame,
+    target: str,
+    save_path: str | None = None,
+    show: bool = True,
+) -> bool:
     if target not in df.columns:
-        return
+        return False
 
     if not pd.api.types.is_numeric_dtype(df[target]):
-        return
+        return False
+
+    sampled_df = _safe_sample(
+        df,
+        max_rows=MAX_ROWS_FOR_BOXPLOT,
+    )
 
     plt.figure(figsize=(10, 3.8))
 
     sns.boxplot(
-        x=df[target],
+        x=sampled_df[target],
     )
 
     plt.title(
@@ -289,8 +374,9 @@ def plot_target_boxplot(
         show=show,
     )
 
+    return True
 
-# Backwards-compatible name
+
 plot_target_summary_boxplot = plot_target_boxplot
 
 
@@ -299,11 +385,11 @@ plot_target_summary_boxplot = plot_target_boxplot
 # =========================================================
 
 def plot_missing_values_map(
-    df,
-    save_path=None,
-    show=True,
-    max_rows=MAX_ROWS_FOR_MISSING_HEATMAP,
-):
+    df: pd.DataFrame,
+    save_path: str | None = None,
+    show: bool = True,
+    max_rows: int = MAX_ROWS_FOR_MISSING_HEATMAP,
+) -> bool:
     if not _has_missing_values(df):
         return False
 
@@ -338,10 +424,10 @@ def plot_missing_values_map(
 
 
 def plot_missing_values_bar(
-    df,
-    save_path=None,
-    show=True,
-):
+    df: pd.DataFrame,
+    save_path: str | None = None,
+    show: bool = True,
+) -> bool:
     missing = df.isnull().sum()
     missing = missing[missing > 0].sort_values(ascending=True)
 
@@ -387,29 +473,25 @@ def plot_missing_values_bar(
 # =========================================================
 
 def plot_correlation_heatmap_auto(
-    df,
-    save_path=None,
-    show=True,
-    max_columns=MAX_CORRELATION_COLUMNS,
-):
-    numeric_df = df.select_dtypes(
-        include="number",
+    df: pd.DataFrame,
+    save_path: str | None = None,
+    show: bool = True,
+    max_columns: int = MAX_CORRELATION_COLUMNS,
+    target: str | None = None,
+) -> bool:
+    numeric_df = _safe_numeric_df(
+        df,
+        max_columns=max_columns,
     )
 
     if numeric_df.shape[1] < 2:
         return False
 
-    if numeric_df.shape[1] > max_columns:
-        variances = (
-            numeric_df
-            .var(numeric_only=True)
-            .sort_values(ascending=False)
-        )
+    if target and target in df.columns and target not in numeric_df.columns:
+        if pd.api.types.is_numeric_dtype(df[target]):
+            numeric_df[target] = df[target]
 
-        selected_columns = variances.head(max_columns).index.tolist()
-        numeric_df = numeric_df[selected_columns]
-
-    correlation_matrix = numeric_df.corr()
+    correlation_matrix = numeric_df.corr(numeric_only=True)
 
     plt.figure(figsize=(14, 10))
 
@@ -438,13 +520,18 @@ def plot_correlation_heatmap_auto(
 
 
 def plot_numeric_distributions_auto(
-    df,
-    save_path=None,
-    show=True,
-    max_columns=MAX_NUMERIC_COLUMNS,
-):
-    numeric_df = _safe_numeric_df(
+    df: pd.DataFrame,
+    save_path: str | None = None,
+    show: bool = True,
+    max_columns: int = MAX_NUMERIC_COLUMNS,
+) -> bool:
+    sampled_df = _safe_sample(
         df,
+        max_rows=MAX_ROWS_FOR_HIST,
+    )
+
+    numeric_df = _safe_numeric_df(
+        sampled_df,
         max_columns=max_columns,
     )
 
@@ -457,13 +544,14 @@ def plot_numeric_distributions_auto(
         edgecolor="white",
     )
 
-    for row in axes:
-        for ax in row:
-            ax.set_title(
-                _pretty_name(ax.get_title()),
-                fontsize=10,
-                fontweight="bold",
-            )
+    axes_flat = axes.flatten() if hasattr(axes, "flatten") else [axes]
+
+    for ax in axes_flat:
+        ax.set_title(
+            _pretty_name(ax.get_title()),
+            fontsize=10,
+            fontweight="bold",
+        )
 
     plt.suptitle(
         "Numeric Feature Distributions",
@@ -482,13 +570,18 @@ def plot_numeric_distributions_auto(
 
 
 def plot_outlier_boxplots_auto(
-    df,
-    save_path=None,
-    show=True,
-    max_columns=MAX_NUMERIC_COLUMNS,
-):
-    numeric_df = _safe_numeric_df(
+    df: pd.DataFrame,
+    save_path: str | None = None,
+    show: bool = True,
+    max_columns: int = MAX_NUMERIC_COLUMNS,
+) -> bool:
+    sampled_df = _safe_sample(
         df,
+        max_rows=MAX_ROWS_FOR_BOXPLOT,
+    )
+
+    numeric_df = _safe_numeric_df(
+        sampled_df,
         max_columns=max_columns,
     )
 
@@ -516,10 +609,7 @@ def plot_outlier_boxplots_auto(
     plt.xlabel("Feature")
     plt.ylabel("Value")
 
-    plt.xticks(
-        rotation=35,
-        ha="right",
-    )
+    plt.xticks(rotation=35, ha="right")
 
     plt.tight_layout()
 
@@ -536,20 +626,24 @@ def plot_outlier_boxplots_auto(
 # =========================================================
 
 def plot_categorical_distributions_auto(
-    df,
-    save_path=None,
-    show=True,
-    max_columns=MAX_CATEGORICAL_COLUMNS,
-    max_categories=MAX_CATEGORIES,
-):
-    categorical_columns = df.select_dtypes(
-        include=["object", "string", "category", "bool"],
-    ).columns.tolist()
+    df: pd.DataFrame,
+    save_path: str | None = None,
+    show: bool = True,
+    max_columns: int = MAX_CATEGORICAL_COLUMNS,
+    max_categories: int = MAX_CATEGORIES,
+) -> bool:
+    sampled_df = _safe_sample(
+        df,
+        max_rows=MAX_ROWS_FOR_CATEGORICAL,
+    )
 
-    if not categorical_columns:
+    selected_columns = _get_categorical_columns(
+        sampled_df,
+        max_columns=max_columns,
+    )
+
+    if not selected_columns:
         return False
-
-    selected_columns = categorical_columns[:max_columns]
 
     fig, axes = plt.subplots(
         nrows=len(selected_columns),
@@ -562,7 +656,7 @@ def plot_categorical_distributions_auto(
 
     for ax, column in zip(axes, selected_columns):
         counts = _top_categories(
-            df[column],
+            sampled_df[column],
             max_categories=max_categories,
         )
 
@@ -596,21 +690,19 @@ def plot_categorical_distributions_auto(
 # =========================================================
 
 def plot_top_correlations_with_target(
-    df,
-    target,
-    save_path=None,
-    show=True,
-    top_n=10,
-):
+    df: pd.DataFrame,
+    target: str,
+    save_path: str | None = None,
+    show: bool = True,
+    top_n: int = 10,
+) -> bool:
     if target not in df.columns:
         return False
 
     if not pd.api.types.is_numeric_dtype(df[target]):
         return False
 
-    numeric_df = df.select_dtypes(
-        include="number",
-    )
+    numeric_df = df.select_dtypes(include="number")
 
     if target not in numeric_df.columns or numeric_df.shape[1] < 2:
         return False
@@ -620,7 +712,7 @@ def plot_top_correlations_with_target(
         .corr(numeric_only=True)[target]
         .drop(labels=[target], errors="ignore")
         .dropna()
-        .sort_values(key=lambda s: s.abs(), ascending=False)
+        .sort_values(key=lambda values: values.abs(), ascending=False)
         .head(top_n)
     )
 
@@ -662,21 +754,19 @@ def plot_top_correlations_with_target(
 
 
 def plot_feature_vs_target_auto(
-    df,
-    target,
-    save_path=None,
-    show=True,
-    top_n=4,
-):
+    df: pd.DataFrame,
+    target: str,
+    save_path: str | None = None,
+    show: bool = True,
+    top_n: int = 4,
+) -> bool:
     if target not in df.columns:
         return False
 
     if not pd.api.types.is_numeric_dtype(df[target]):
         return False
 
-    numeric_df = df.select_dtypes(
-        include="number",
-    )
+    numeric_df = df.select_dtypes(include="number")
 
     if numeric_df.shape[1] < 2:
         return False
@@ -695,7 +785,11 @@ def plot_feature_vs_target_auto(
         return False
 
     selected_features = correlations.index.tolist()
-    sampled_df = _safe_sample(df)
+
+    sampled_df = _safe_sample(
+        df,
+        max_rows=MAX_ROWS_FOR_SCATTER,
+    )
 
     fig, axes = plt.subplots(
         nrows=len(selected_features),
@@ -711,7 +805,8 @@ def plot_feature_vs_target_auto(
             data=sampled_df,
             x=feature,
             y=target,
-            alpha=0.35,
+            alpha=0.30,
+            s=18,
             ax=ax,
         )
 
@@ -736,16 +831,16 @@ def plot_feature_vs_target_auto(
 # =========================================================
 
 def plot_time_series_overview(
-    df,
-    date_column,
-    target=None,
-    save_path=None,
-    show=True,
-):
+    df: pd.DataFrame,
+    date_column: str,
+    target: str | None = None,
+    save_path: str | None = None,
+    show: bool = True,
+) -> bool:
     if date_column not in df.columns:
         return False
 
-    temp_df = df.copy()
+    temp_df = df[[date_column] + ([target] if target and target in df.columns else [])].copy()
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
@@ -755,16 +850,15 @@ def plot_time_series_overview(
             errors="coerce",
         )
 
-    temp_df = temp_df.dropna(
-        subset=[date_column],
-    )
+    temp_df = temp_df.dropna(subset=[date_column])
 
     if temp_df.empty:
         return False
 
-    temp_df = temp_df.sort_values(
-        by=date_column,
-    )
+    temp_df = temp_df.sort_values(by=date_column)
+
+    if len(temp_df) > MAX_ROWS_FOR_SCATTER:
+        temp_df = _safe_sample(temp_df, MAX_ROWS_FOR_SCATTER).sort_values(by=date_column)
 
     plt.figure(figsize=(13, 6))
 
@@ -818,15 +912,15 @@ def plot_time_series_overview(
 # =========================================================
 
 def generate_auto_plots(
-    df,
-    target=None,
-    task_type="auto",
-    date_column=None,
-    save_plots=False,
-    output_dir="reports/plots",
-    show=None,
-    clean_output_dir=True,
-):
+    df: pd.DataFrame,
+    target: str | None = None,
+    task_type: str = "auto",
+    date_column: str | None = None,
+    save_plots: bool = False,
+    output_dir: str = "reports/plots",
+    show: bool | None = None,
+    clean_output_dir: bool = True,
+) -> None:
     print("\nAutomatic Visualizations")
     print("=" * 60)
 
@@ -845,7 +939,7 @@ def generate_auto_plots(
         task_type=task_type,
     )
 
-    if target:
+    if target and target in df.columns:
         print("- Generating target distribution plot")
 
         plot_target_distribution(
@@ -907,15 +1001,14 @@ def generate_auto_plots(
             show=show,
         )
 
-    numeric_df = df.select_dtypes(
-        include="number",
-    )
+    numeric_df = df.select_dtypes(include="number")
 
     if numeric_df.shape[1] >= 2:
         print("- Generating correlation heatmap")
 
         plot_correlation_heatmap_auto(
             df=df,
+            target=target,
             save_path=_path(output_dir, "correlation_heatmap.png", save_plots),
             show=show,
         )
@@ -937,9 +1030,7 @@ def generate_auto_plots(
             show=show,
         )
 
-    categorical_columns = df.select_dtypes(
-        include=["object", "string", "category", "bool"],
-    ).columns.tolist()
+    categorical_columns = _get_categorical_columns(df)
 
     if categorical_columns:
         print("- Generating categorical distributions")
@@ -965,3 +1056,6 @@ def generate_auto_plots(
         print("\nPlots saved successfully")
         print("=" * 60)
         print(f"Location: {output_dir}")
+
+    plt.close("all")
+    gc.collect()

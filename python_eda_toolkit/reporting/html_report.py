@@ -1,18 +1,14 @@
 """
 html_report.py
 
-Professional HTML report generator for Python EDA Toolkit.
+Professional, lightweight HTML report generator for Python EDA Toolkit.
 
-This module builds a reusable, presentation-ready HTML report with:
-- Executive summary
-- Dataset metrics
-- Explainable health score with component breakdown
-- Data quality warnings
-- Preprocessing recommendations
-- Model recommendations with automatic explanations
-- Recommended next steps
-- Optional model benchmark table
-- Visual diagnostics grouped by analytical purpose
+Optimized goals:
+- Clearer wording: Data Readiness Score instead of ambiguous Health Score.
+- Less repeated information across sections.
+- Safer rendering for strings, dictionaries, lists and pandas DataFrames.
+- Backward-compatible public function: generate_html_report(...).
+- No heavy dependencies and no base64 image embedding: plots are linked from disk.
 """
 
 from __future__ import annotations
@@ -22,6 +18,10 @@ from html import escape
 from pathlib import Path
 from typing import Any, Iterable
 
+
+# =========================================================
+# STYLES
+# =========================================================
 
 _STYLES = """
 :root {
@@ -72,7 +72,7 @@ body {
 
 .hero p {
     margin: 0;
-    max-width: 900px;
+    max-width: 920px;
     font-size: 17px;
     line-height: 1.65;
     opacity: 0.96;
@@ -208,7 +208,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.4s ease;
 }
 
 .score-inner {
@@ -295,6 +294,7 @@ body {
 .warning-card.warning { border-left: 5px solid var(--warning); background: #fffaf0; }
 .warning-card.danger { border-left: 5px solid var(--danger); background: #fff5f5; }
 .warning-card.success { border-left: 5px solid var(--success); background: #f0fff4; }
+.warning-card.neutral { border-left: 5px solid var(--secondary); background: var(--soft-blue); }
 
 .next-step-card {
     background: var(--soft);
@@ -316,9 +316,7 @@ body {
     font-size: 13px;
 }
 
-.plot-group {
-    margin-top: 28px;
-}
+.plot-group { margin-top: 28px; }
 
 .plot-group h3 {
     color: var(--primary);
@@ -358,9 +356,7 @@ body {
     background: white;
 }
 
-.table-wrapper {
-    overflow-x: auto;
-}
+.table-wrapper { overflow-x: auto; }
 
 table {
     width: 100%;
@@ -385,15 +381,20 @@ th {
     font-size: 12px;
 }
 
-tr:last-child td {
-    border-bottom: none;
-}
+tr:last-child td { border-bottom: none; }
 
 .footer {
     text-align: center;
     color: var(--muted);
     font-size: 13px;
     padding: 24px;
+}
+
+@media print {
+    body { background: white; }
+    .page { padding: 20px; }
+    .section, .metric-card, .plot-card { box-shadow: none; break-inside: avoid; }
+    .hero { box-shadow: none; }
 }
 
 @media (max-width: 1100px) {
@@ -416,32 +417,57 @@ tr:last-child td {
 """
 
 
+# =========================================================
+# PLOT REGISTRY
+# =========================================================
+
 _PLOT_REGISTRY = [
-    ("Target Analysis", [
-        ("target_distribution", "Target Distribution", "Shows the distribution of the target variable."),
-        ("target_boxplot", "Target Outlier Overview", "Summarizes the spread of a numerical target."),
-        ("target_correlations", "Top Correlations With Target", "Ranks numerical relationships with the target."),
-        ("feature_vs_target", "Feature vs Target Relationships", "Shows relevant feature-target relationships."),
-    ]),
-    ("Data Quality", [
-        ("missing_values", "Missing Values Overview", "Visual overview of missing data patterns."),
-        ("missing_values_bar", "Missing Values by Column", "Highlights missing values by column."),
-    ]),
-    ("Numerical Diagnostics", [
-        ("correlation_heatmap", "Correlation Heatmap", "Highlights linear relationships between numerical variables."),
-        ("numeric_distributions", "Numeric Feature Distributions", "Shows numerical distributions and skewness."),
-        ("numeric_outliers", "Numerical Outlier Overview", "Provides a quick overview of numerical outliers."),
-    ]),
-    ("Categorical Diagnostics", [
-        ("categorical_distributions", "Categorical Distributions", "Shows the most frequent categorical values."),
-    ]),
-    ("Time Series Diagnostics", [
-        ("time_series_overview", "Time Series Overview", "Shows temporal trends when a date column exists."),
-    ]),
+    (
+        "Target Analysis",
+        [
+            ("target_distribution", "Target Distribution", "Distribution of the target variable."),
+            ("target_boxplot", "Target Outlier Overview", "Spread of a numerical target."),
+            ("target_correlations", "Top Target Correlations", "Numerical relationships with the target."),
+            ("feature_vs_target", "Feature vs Target", "Relevant feature-target relationships."),
+        ],
+    ),
+    (
+        "Data Quality",
+        [
+            ("missing_values", "Missing Values Overview", "Visual overview of missing data patterns."),
+            ("missing_values_bar", "Missing Values by Column", "Columns ranked by missing values."),
+        ],
+    ),
+    (
+        "Numerical Diagnostics",
+        [
+            ("correlation_heatmap", "Correlation Heatmap", "Linear relationships between numerical variables."),
+            ("numeric_distributions", "Numeric Distributions", "Distributions and skewness of numerical features."),
+            ("numeric_outliers", "Numeric Outliers", "Quick overview of numerical outliers."),
+        ],
+    ),
+    (
+        "Categorical Diagnostics",
+        [
+            ("categorical_distributions", "Categorical Distributions", "Most frequent categorical values."),
+        ],
+    ),
+    (
+        "Time Series Diagnostics",
+        [
+            ("time_series_overview", "Time Series Overview", "Temporal trends when a date column exists."),
+        ],
+    ),
 ]
 
 
+# =========================================================
+# NORMALIZATION HELPERS
+# =========================================================
+
 def _safe_text(value: Any) -> str:
+    if value is None:
+        return ""
     return escape(str(value))
 
 
@@ -450,28 +476,86 @@ def _as_list(items: Any) -> list[Any]:
         return []
     if isinstance(items, (str, bytes)):
         return [items]
+    if isinstance(items, dict):
+        return [items]
     if isinstance(items, Iterable):
         return list(items)
     return [items]
 
 
-def _deduplicate(items: Any) -> list[str]:
+def _stringify_item(item: Any) -> str:
+    if item is None:
+        return ""
+
+    if isinstance(item, dict):
+        title = item.get("title") or item.get("model") or item.get("name") or item.get("category")
+        description = item.get("description") or item.get("reason") or item.get("message") or item.get("recommendation")
+        caution = item.get("caution")
+
+        parts = [str(part).strip() for part in [title, description] if str(part or "").strip()]
+        text = ": ".join(parts)
+
+        if caution:
+            text = f"{text} Caution: {caution}" if text else f"Caution: {caution}"
+
+        return text.strip()
+
+    return str(item).strip()
+
+
+def _deduplicate(items: Any, max_items: int | None = None) -> list[str]:
     seen = set()
-    result = []
+    result: list[str] = []
 
     for item in _as_list(items):
-        text = str(item).strip()
-        normalized = text.lower()
+        text = _stringify_item(item)
+        normalized = " ".join(text.lower().split())
+
         if text and normalized not in seen:
             seen.add(normalized)
             result.append(text)
+
+        if max_items is not None and len(result) >= max_items:
+            break
 
     return result
 
 
 def _suggestions_text(preprocessing_suggestions=None, model_suggestions=None) -> str:
-    return " ".join(_deduplicate(preprocessing_suggestions) + _deduplicate(model_suggestions)).lower()
+    items = _deduplicate(preprocessing_suggestions) + _deduplicate(model_suggestions)
+    return " ".join(items).lower()
 
+
+def _format_number(value: Any) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return _safe_text(value)
+
+    if number.is_integer():
+        return f"{int(number):,}".replace(",", " ")
+    return f"{number:,.2f}".replace(",", " ")
+
+
+def _normalize_column_types(column_types: dict[str, Any] | None) -> dict[str, list[Any]]:
+    column_types = column_types or {}
+
+    return {
+        "numeric": list(column_types.get("numeric") or column_types.get("numerical") or []),
+        "categorical": list(column_types.get("categorical") or []),
+        "datetime": list(column_types.get("datetime") or []),
+        "text": list(column_types.get("text") or []),
+        "boolean": list(column_types.get("boolean") or []),
+        "id": list(column_types.get("id") or column_types.get("identifier") or []),
+        "constant": list(column_types.get("constant") or []),
+        "high_cardinality": list(column_types.get("high_cardinality") or []),
+        "numeric_as_text": list(column_types.get("numeric_as_text") or []),
+    }
+
+
+# =========================================================
+# SCORE AND TEXT LOGIC
+# =========================================================
 
 def _render_badge(text: str, level: str = "success") -> str:
     allowed = {"success", "warning", "danger", "neutral"}
@@ -479,85 +563,75 @@ def _render_badge(text: str, level: str = "success") -> str:
     return f'<span class="badge badge-{level}">{_safe_text(text)}</span>'
 
 
-def _render_list(items: Any, empty_message: str) -> str:
-    items = _deduplicate(items) or [empty_message]
-
-    return (
-        '<ul class="clean-list">'
-        + "".join(f"<li>{_safe_text(item)}</li>" for item in items)
-        + "</ul>"
-    )
-
-
-def _render_metric_card(label: str, value: Any, subtitle: str) -> str:
-    return f"""
-        <div class="metric-card">
-            <div class="metric-label">{_safe_text(label)}</div>
-            <div class="metric-value">{_safe_text(value)}</div>
-            <div class="metric-subtitle">{subtitle}</div>
-        </div>
-    """
-
-
-def _health_badge(score: int) -> str:
+def _readiness_badge(score: int) -> str:
     if score >= 85:
-        return _render_badge("Strong dataset health", "success")
+        return _render_badge("Ready", "success")
     if score >= 65:
-        return _render_badge("Moderate dataset health", "warning")
-    return _render_badge("Needs review", "danger")
+        return _render_badge("Review recommended", "warning")
+    return _render_badge("Needs cleaning", "danger")
 
 
 def _missing_badge(missing_values: int) -> str:
     if missing_values == 0:
         return _render_badge("No missing values", "success")
-    return _render_badge(f"{missing_values} missing values", "warning")
+    return _render_badge(f"{missing_values} missing", "warning")
+
+
+def _readiness_label_plain(score: int) -> str:
+    if score >= 85:
+        return "ready for initial modeling"
+    if score >= 65:
+        return "usable, with review recommended"
+    return "not ready without cleaning"
 
 
 def _score_component(value: int) -> int:
     return max(0, min(20, int(value)))
 
 
-def _calculate_health_score(
+def _calculate_readiness_score(
     missing_values: int,
     rows: int,
     columns: int,
     preprocessing_suggestions=None,
+    data_profile: dict[str, Any] | None = None,
+    column_types: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return an explainable health score and its component breakdown.
-
-    The score remains intentionally lightweight because this HTML layer does
-    not yet receive detailed metrics such as duplicate count, skewness values,
-    leakage checks or exact cardinality. Those can be added later without
-    breaking this function's public behavior.
-    """
     total_cells = max(rows * columns, 1)
     missing_ratio = missing_values / total_cells
     suggestions = _suggestions_text(preprocessing_suggestions)
+    data_profile = data_profile or {}
+    column_types = _normalize_column_types(column_types)
+
+    duplicate_ratio = float(data_profile.get("duplicate_ratio") or 0)
+    high_cardinality_count = len(column_types.get("high_cardinality", []))
+    constant_count = len(column_types.get("constant", []))
+    text_count = len(column_types.get("text", []))
 
     breakdown = {
-        "Missing Values": 20,
+        "Completeness": 20,
         "Dataset Size": 20,
         "Feature Structure": 20,
-        "Data Quality Signals": 20,
+        "Quality Signals": 20,
         "Model Readiness": 20,
     }
 
     notes = {
-        "Missing Values": "Completeness of the dataset based on detected missing cells.",
-        "Dataset Size": "Basic readiness based on the number of available observations.",
-        "Feature Structure": "Estimated complexity based on number and type-related signals.",
-        "Data Quality Signals": "Quality risks inferred from preprocessing recommendations.",
-        "Model Readiness": "How close the dataset appears to baseline modeling readiness.",
+        "Completeness": "Missing-cell impact on the dataset.",
+        "Dataset Size": "Whether there are enough rows for a first analysis.",
+        "Feature Structure": "Complexity from columns, text and categorical signals.",
+        "Quality Signals": "Risks such as duplicates, constants and outliers.",
+        "Model Readiness": "Practical readiness for a baseline ML workflow.",
     }
 
     if missing_ratio > 0.20:
-        breakdown["Missing Values"] -= 16
+        breakdown["Completeness"] -= 16
         breakdown["Model Readiness"] -= 8
     elif missing_ratio > 0.05:
-        breakdown["Missing Values"] -= 10
+        breakdown["Completeness"] -= 10
         breakdown["Model Readiness"] -= 5
     elif missing_ratio > 0:
-        breakdown["Missing Values"] -= 4
+        breakdown["Completeness"] -= 4
         breakdown["Model Readiness"] -= 2
 
     if rows < 100:
@@ -573,36 +647,56 @@ def _calculate_health_score(
     elif columns > 30:
         breakdown["Feature Structure"] -= 4
 
-    if "duplicate" in suggestions:
-        breakdown["Data Quality Signals"] -= 4
+    if high_cardinality_count:
+        breakdown["Feature Structure"] -= min(8, 3 + high_cardinality_count)
         breakdown["Model Readiness"] -= 2
-    if "high-cardinality" in suggestions or "high cardinality" in suggestions:
+    elif "high-cardinality" in suggestions or "high cardinality" in suggestions:
         breakdown["Feature Structure"] -= 5
         breakdown["Model Readiness"] -= 2
-    if "constant" in suggestions:
-        breakdown["Data Quality Signals"] -= 8
-        breakdown["Model Readiness"] -= 4
+
+    if text_count:
+        breakdown["Feature Structure"] -= min(5, text_count)
+
+    if constant_count:
+        breakdown["Quality Signals"] -= min(8, 2 * constant_count)
+        breakdown["Model Readiness"] -= 3
+    elif "constant" in suggestions:
+        breakdown["Quality Signals"] -= 6
+        breakdown["Model Readiness"] -= 3
+
+    if duplicate_ratio >= 0.05:
+        breakdown["Quality Signals"] -= 6
+        breakdown["Model Readiness"] -= 3
+    elif duplicate_ratio > 0 or "duplicate" in suggestions:
+        breakdown["Quality Signals"] -= 3
+        breakdown["Model Readiness"] -= 1
+
     if "outlier" in suggestions:
-        breakdown["Data Quality Signals"] -= 3
+        breakdown["Quality Signals"] -= 3
+    if "encoding" in suggestions or "categorical" in suggestions:
+        breakdown["Model Readiness"] -= 1
     if "scaling" in suggestions or "scale" in suggestions:
         breakdown["Model Readiness"] -= 1
-    if "categorical" in suggestions or "encoding" in suggestions:
-        breakdown["Model Readiness"] -= 2
 
     breakdown = {key: _score_component(value) for key, value in breakdown.items()}
-    total_score = sum(breakdown.values())
+    total_score = max(0, min(100, sum(breakdown.values())))
 
     return {
-        "total_score": max(0, min(100, total_score)),
+        "total_score": total_score,
         "breakdown": breakdown,
         "notes": notes,
         "missing_ratio": missing_ratio,
     }
 
 
-def _dataset_complexity(rows: int, columns: int, preprocessing_suggestions=None) -> str:
+# Backward-compatible internal name.
+_calculate_health_score = _calculate_readiness_score
+
+
+def _dataset_complexity(rows: int, columns: int, preprocessing_suggestions=None, column_types=None) -> str:
     score = 0
     suggestions = _suggestions_text(preprocessing_suggestions)
+    column_types = _normalize_column_types(column_types)
 
     if rows > 100_000:
         score += 2
@@ -614,11 +708,11 @@ def _dataset_complexity(rows: int, columns: int, preprocessing_suggestions=None)
     elif columns > 30:
         score += 1
 
-    if "high-cardinality" in suggestions or "high cardinality" in suggestions:
+    if column_types["high_cardinality"] or "high cardinality" in suggestions:
         score += 1
-    if "text" in suggestions:
+    if column_types["text"] or "text" in suggestions:
         score += 1
-    if "time series" in suggestions or "date" in suggestions:
+    if column_types["datetime"] or "time series" in suggestions or "date" in suggestions:
         score += 1
 
     if score <= 1:
@@ -633,117 +727,143 @@ def _dataset_complexity(rows: int, columns: int, preprocessing_suggestions=None)
 def _generate_key_findings(
     dataset_shape: tuple[int, int],
     missing_values: int,
-    preprocessing_suggestions,
-    model_suggestions,
+    preprocessing_suggestions=None,
+    model_suggestions=None,
+    readiness_score: int | None = None,
     health_score: int | None = None,
     complexity: str | None = None,
+    data_profile: dict[str, Any] | None = None,
 ) -> list[str]:
     rows, columns = dataset_shape
-    findings = [f"The dataset contains {rows} observations and {columns} variables."]
+    score = readiness_score if readiness_score is not None else health_score
+    data_profile = data_profile or {}
+
+    findings = [f"The dataset contains {_format_number(rows)} rows and {_format_number(columns)} columns."]
 
     if missing_values == 0:
         findings.append("No missing values were detected.")
     else:
-        findings.append(f"{missing_values} missing values were detected and should be reviewed before modeling.")
+        findings.append(f"{_format_number(missing_values)} missing value(s) were detected.")
 
-    if health_score is not None:
-        findings.append(f"The dataset health score is {health_score}/100, indicating {_health_label_plain(health_score)}.")
+    duplicate_rows = int(data_profile.get("duplicate_rows") or 0)
+    if duplicate_rows > 0:
+        findings.append(f"{_format_number(duplicate_rows)} duplicate row(s) should be reviewed.")
+
+    if score is not None:
+        findings.append(f"Data readiness is {score}/100: {_readiness_label_plain(int(score))}.")
 
     if complexity:
-        findings.append(f"Estimated dataset complexity is {complexity.lower()} based on size and structure.")
-
-    if preprocessing_suggestions:
-        findings.append("The toolkit detected preprocessing actions that may improve model readiness.")
+        findings.append(f"Dataset complexity is {complexity.lower()}.")
 
     if model_suggestions:
-        findings.append("Model families were recommended using a baseline-first approach.")
+        findings.append("Baseline-first model recommendations are available.")
 
-    return findings
+    return _deduplicate(findings, max_items=6)
 
 
-def _health_label_plain(score: int) -> str:
-    if score >= 85:
-        return "strong overall readiness"
-    if score >= 65:
-        return "moderate readiness with review recommended"
-    return "a need for careful data quality review"
-
+# =========================================================
+# WARNING AND STEP GENERATION
+# =========================================================
 
 def _generate_dataset_warnings(
     rows: int,
     columns: int,
     missing_values: int,
     preprocessing_suggestions=None,
+    data_profile: dict[str, Any] | None = None,
+    column_types: dict[str, Any] | None = None,
 ) -> list[dict[str, str]]:
     warnings: list[dict[str, str]] = []
     total_cells = max(rows * columns, 1)
     missing_ratio = missing_values / total_cells
     suggestions = _suggestions_text(preprocessing_suggestions)
+    data_profile = data_profile or {}
+    column_types = _normalize_column_types(column_types)
+
+    duplicate_rows = int(data_profile.get("duplicate_rows") or 0)
+    duplicate_ratio = float(data_profile.get("duplicate_ratio") or 0)
 
     if missing_values > 0:
-        level = "danger" if missing_ratio > 0.05 else "warning"
         warnings.append({
-            "level": level,
+            "level": "danger" if missing_ratio > 0.05 else "warning",
             "title": "Missing values detected",
-            "message": (
-                f"{missing_values} missing cells were found "
-                f"({missing_ratio:.2%} of all cells). Review affected columns before training."
-            ),
+            "message": f"{_format_number(missing_values)} missing cell(s) found ({missing_ratio:.2%}). Review affected columns before training.",
+        })
+
+    if duplicate_rows > 0:
+        warnings.append({
+            "level": "danger" if duplicate_ratio >= 0.05 else "warning",
+            "title": "Duplicate rows detected",
+            "message": f"{_format_number(duplicate_rows)} duplicate row(s) found. Confirm whether they are valid repeated observations.",
         })
 
     if rows < 100:
         warnings.append({
             "level": "danger",
             "title": "Very small dataset",
-            "message": "The dataset has fewer than 100 rows. Model evaluation may be unstable.",
+            "message": "Model evaluation may be unstable with fewer than 100 rows.",
         })
     elif rows < 500:
         warnings.append({
             "level": "warning",
             "title": "Limited sample size",
-            "message": "The dataset has fewer than 500 rows. Prefer simple baselines and cross-validation.",
+            "message": "Prefer simple baselines and careful validation.",
         })
 
     if columns > 100:
         warnings.append({
             "level": "warning",
             "title": "High dimensionality",
-            "message": "The dataset has more than 100 columns. Feature selection or regularization may be useful.",
+            "message": "Feature selection, regularization or dimensionality reduction may be useful.",
         })
 
-    if "duplicate" in suggestions:
-        warnings.append({
-            "level": "warning",
-            "title": "Possible duplicate records",
-            "message": "Duplicate-related preprocessing was detected. Confirm whether duplicated rows are valid observations.",
-        })
-
-    if "constant" in suggestions:
+    if column_types["constant"] or "constant" in suggestions:
         warnings.append({
             "level": "warning",
             "title": "Low-information features",
-            "message": "Constant or near-constant columns may add noise and should usually be removed.",
+            "message": "Constant or near-constant columns usually add noise and can be removed.",
         })
 
-    if "high-cardinality" in suggestions or "high cardinality" in suggestions:
+    if column_types["id"]:
+        warnings.append({
+            "level": "warning",
+            "title": "Potential ID columns",
+            "message": "ID-like fields should usually be excluded from standard predictive features.",
+        })
+
+    if column_types["high_cardinality"] or "high-cardinality" in suggestions or "high cardinality" in suggestions:
         warnings.append({
             "level": "warning",
             "title": "High-cardinality categorical features",
-            "message": "Use careful encoding strategies to avoid sparse features or target leakage.",
+            "message": "Avoid naive dense one-hot encoding; use sparse, grouped or frequency-based strategies.",
+        })
+
+    if column_types["text"]:
+        warnings.append({
+            "level": "warning",
+            "title": "Text columns detected",
+            "message": "Text-like fields may require NLP-specific preprocessing before modeling.",
+        })
+
+    if column_types["datetime"]:
+        warnings.append({
+            "level": "warning",
+            "title": "Datetime columns detected",
+            "message": "Create temporal features and avoid random splits for forecasting tasks.",
         })
 
     if "outlier" in suggestions:
         warnings.append({
             "level": "warning",
             "title": "Potential outliers",
-            "message": "Outlier-sensitive models may require robust scaling, capping or domain validation.",
+            "message": "Review outlier-sensitive columns before choosing transformations or robust models.",
         })
 
     if not warnings:
         warnings.append({
             "level": "success",
-            "title": "No critical warnings detected",
-            "message": "The current report did not identify major structural data quality risks.",
+            "title": "No major warnings detected",
+            "message": "The dataset looks suitable for an initial EDA pass.",
         })
 
     return warnings
@@ -756,21 +876,31 @@ def _generate_next_steps(
     preprocessing_suggestions=None,
     model_suggestions=None,
     model_results=None,
+    column_types: dict[str, Any] | None = None,
 ) -> list[str]:
     suggestions = _suggestions_text(preprocessing_suggestions, model_suggestions)
+    column_types = _normalize_column_types(column_types)
     steps: list[str] = []
 
     if missing_values > 0:
-        steps.append("Inspect missing values by column and apply an appropriate imputation or removal strategy.")
+        steps.append("Review missing values and choose imputation, filtering or feature-specific treatment.")
 
-    if "categorical" in suggestions or "encoding" in suggestions:
-        steps.append("Encode categorical variables using one-hot encoding for low-cardinality features or safer alternatives for high-cardinality features.")
+    if column_types["constant"]:
+        steps.append("Remove constant columns before modeling.")
 
-    if "scale" in suggestions or "scaling" in suggestions:
-        steps.append("Scale numerical features before using distance-based, linear or gradient-based models.")
+    if column_types["id"]:
+        steps.append("Exclude ID-like columns from model features unless they have validated analytical meaning.")
+
+    if column_types["high_cardinality"]:
+        steps.append("Use sparse or grouped encoding for high-cardinality categorical features.")
+    elif column_types["categorical"] or "categorical" in suggestions or "encoding" in suggestions:
+        steps.append("Encode categorical variables with low-cardinality-safe one-hot encoding.")
+
+    if column_types["numeric"] or "scaling" in suggestions or "scale" in suggestions:
+        steps.append("Scale numerical features for linear, distance-based or regularized models.")
 
     if "outlier" in suggestions:
-        steps.append("Review numerical outliers and decide whether to keep, cap, transform or investigate them.")
+        steps.append("Inspect numerical outliers and decide whether to keep, cap, transform or investigate them.")
 
     if rows >= 100:
         steps.append("Create a train/test split and keep the test set untouched for final evaluation.")
@@ -780,39 +910,53 @@ def _generate_next_steps(
     if not any("dummy" in item.lower() or "baseline" in item.lower() for item in _deduplicate(model_suggestions)):
         steps.append("Start with a simple baseline model before testing stronger candidates.")
 
-    steps.append("Compare candidate models with task-appropriate metrics such as RMSE/MAE for regression or F1/ROC-AUC for classification.")
-
     if model_results is not None:
-        steps.append("Use benchmark results to select the best trade-off between performance, interpretability and complexity.")
+        steps.append("Use benchmark results to balance performance, interpretability and complexity.")
+    else:
+        steps.append("Compare candidate models with task-appropriate metrics.")
 
-    return _deduplicate(steps)[:7]
+    return _deduplicate(steps, max_items=7)
 
+
+# =========================================================
+# MODEL RECOMMENDATIONS
+# =========================================================
 
 def _model_reason(model_text: str, preprocessing_suggestions=None) -> str:
     text = model_text.lower()
     suggestions = _suggestions_text(preprocessing_suggestions)
 
     if "dummy" in text or "baseline" in text:
-        return "Recommended to establish a minimum reference point before evaluating more complex models."
+        return "Minimum reference point before evaluating more complex models."
     if "linear" in text or "ridge" in text or "lasso" in text:
-        return "Useful as an interpretable baseline, especially when relationships are approximately linear or explainability matters."
+        return "Interpretable first model, useful when explainability matters."
     if "randomforest" in text or "random forest" in text:
-        return "Useful for non-linear tabular relationships and robust baseline performance with limited feature engineering."
+        return "Strong non-linear tabular baseline, but should be memory-limited on large datasets."
     if "gradient" in text or "boost" in text or "xgboost" in text or "lightgbm" in text or "catboost" in text:
-        return "Recommended for stronger tabular performance once preprocessing and validation are stable."
+        return "Good stronger candidate after preprocessing and validation are stable."
     if "logistic" in text:
-        return "Useful as an interpretable classification baseline and a strong first model for structured data."
+        return "Transparent classification baseline for structured data."
     if "tree" in text:
-        return "Useful for capturing non-linear rules while remaining easier to interpret than larger ensembles."
+        return "Captures non-linear rules while staying easier to interpret than ensembles."
     if "svm" in text or "support vector" in text:
-        return "Can work well on medium-sized datasets, especially after scaling numerical features."
+        return "Can work on medium-sized datasets after scaling."
     if "knn" in text or "nearest" in text:
-        return "Can be tested after scaling, but it may be sensitive to irrelevant features and dataset size."
+        return "Sensitive to scale, irrelevant features and dataset size."
 
     if "categorical" in suggestions:
-        return "Relevant candidate after applying appropriate categorical encoding and validation."
+        return "Relevant after applying appropriate categorical encoding and validation."
 
-    return "Suggested as a candidate model to compare against the baseline using consistent validation metrics."
+    return "Candidate to compare against the baseline with consistent metrics."
+
+
+def _split_model_string(text: str) -> tuple[str, str]:
+    text = str(text).strip()
+
+    if ":" in text:
+        model, reason = text.split(":", 1)
+        return model.strip(), reason.strip()
+
+    return text, _model_reason(text)
 
 
 def _normalize_model_recommendations(model_suggestions, preprocessing_suggestions=None) -> list[dict[str, str]]:
@@ -821,15 +965,18 @@ def _normalize_model_recommendations(model_suggestions, preprocessing_suggestion
     for item in _as_list(model_suggestions):
         if isinstance(item, dict):
             model = str(item.get("model") or item.get("name") or item.get("title") or "Model recommendation").strip()
-            reason = str(item.get("reason") or item.get("explanation") or _model_reason(model, preprocessing_suggestions)).strip()
+            reason = str(item.get("reason") or item.get("explanation") or item.get("description") or _model_reason(model, preprocessing_suggestions)).strip()
+            caution = item.get("caution")
+            if caution:
+                reason = f"{reason} Caution: {caution}"
         else:
-            model = str(item).strip()
-            reason = _model_reason(model, preprocessing_suggestions)
+            model, reason = _split_model_string(str(item))
+            if not reason:
+                reason = _model_reason(model, preprocessing_suggestions)
 
         if model:
             normalized.append({"model": model, "reason": reason})
 
-    # Deduplicate by model name while preserving order.
     seen = set()
     result = []
     for item in normalized:
@@ -838,8 +985,12 @@ def _normalize_model_recommendations(model_suggestions, preprocessing_suggestion
             seen.add(key)
             result.append(item)
 
-    return result
+    return result[:8]
 
+
+# =========================================================
+# HTML RENDERERS
+# =========================================================
 
 def _render_section(title: str, intro: str, body: str) -> str:
     return f"""
@@ -851,19 +1002,39 @@ def _render_section(title: str, intro: str, body: str) -> str:
     """
 
 
-def _render_metrics_grid(rows: int, columns: int, missing_values: int, health_score: int, complexity: str) -> str:
+def _render_list(items: Any, empty_message: str, max_items: int | None = None) -> str:
+    normalized = _deduplicate(items, max_items=max_items) or [empty_message]
+
+    return (
+        '<ul class="clean-list">'
+        + "".join(f"<li>{_safe_text(item)}</li>" for item in normalized)
+        + "</ul>"
+    )
+
+
+def _render_metric_card(label: str, value: Any, subtitle: str) -> str:
+    return f"""
+        <div class="metric-card">
+            <div class="metric-label">{_safe_text(label)}</div>
+            <div class="metric-value">{_format_number(value)}</div>
+            <div class="metric-subtitle">{subtitle}</div>
+        </div>
+    """
+
+
+def _render_metrics_grid(rows: int, columns: int, missing_values: int, readiness_score: int, complexity: str) -> str:
     cards = [
-        _render_metric_card("Rows", rows, "Dataset observations"),
-        _render_metric_card("Columns", columns, "Available variables"),
-        _render_metric_card("Missing Values", missing_values, _missing_badge(missing_values)),
-        _render_metric_card("Health Score", f"{health_score}/100", _health_badge(health_score)),
-        _render_metric_card("Complexity", complexity, "Estimated from size and structure"),
+        _render_metric_card("Rows", rows, "records"),
+        _render_metric_card("Columns", columns, "features"),
+        _render_metric_card("Missing", missing_values, _missing_badge(missing_values)),
+        _render_metric_card("Readiness", f"{readiness_score}/100", _readiness_badge(readiness_score)),
+        _render_metric_card("Complexity", complexity, "size + structure"),
     ]
 
     return f'<section class="grid">{"".join(cards)}</section>'
 
 
-def _render_health_breakdown(breakdown: dict[str, int], notes: dict[str, str]) -> str:
+def _render_readiness_breakdown(breakdown: dict[str, int], notes: dict[str, str]) -> str:
     cards = []
 
     for component, value in breakdown.items():
@@ -878,7 +1049,7 @@ def _render_health_breakdown(breakdown: dict[str, int], notes: dict[str, str]) -
                 <div class="progress-track">
                     <div class="progress-fill" style="--width: {percent}%;"></div>
                 </div>
-                <p class="breakdown-note">{_safe_text(notes.get(component, "Quality component."))}</p>
+                <p class="breakdown-note">{_safe_text(notes.get(component, "Readiness component."))}</p>
             </div>
             """
         )
@@ -886,14 +1057,14 @@ def _render_health_breakdown(breakdown: dict[str, int], notes: dict[str, str]) -
     return f'<div class="breakdown-grid">{"".join(cards)}</div>'
 
 
-def _render_health_score_section(health: dict[str, Any]) -> str:
-    score = int(health["total_score"])
-    breakdown = health.get("breakdown", {})
-    notes = health.get("notes", {})
+def _render_readiness_score_section(readiness: dict[str, Any]) -> str:
+    score = int(readiness["total_score"])
+    breakdown = readiness.get("breakdown", {})
+    notes = readiness.get("notes", {})
 
     return _render_section(
-        title="Dataset Health Score",
-        intro="An explainable quality indicator for exploratory analysis and baseline modeling readiness.",
+        title="Data Readiness Score",
+        intro="A lightweight indicator of whether the dataset is ready for EDA, preprocessing and baseline modeling. It is not model accuracy.",
         body=f"""
             <div class="score-wrapper">
                 <div class="score-circle" style="--score: {score}%;">
@@ -903,23 +1074,30 @@ def _render_health_score_section(health: dict[str, Any]) -> str:
                     </div>
                 </div>
                 <div>
-                    {_health_badge(score)}
+                    {_readiness_badge(score)}
                     <p class="section-intro" style="margin-top: 14px; margin-bottom: 0;">
-                        This score is not a replacement for expert validation. It is a lightweight,
-                        transparent signal designed to identify whether the dataset is ready for
-                        exploratory analysis, preprocessing and baseline modeling.
+                        This score summarizes structural readiness. It helps prioritize cleaning,
+                        encoding and validation work before training models.
                     </p>
                 </div>
             </div>
             <div style="margin-top: 26px;">
-                {_render_health_breakdown(breakdown, notes)}
+                {_render_readiness_breakdown(breakdown, notes)}
             </div>
         """,
     )
 
 
+# Backward-compatible internal name.
+_render_health_score_section = _render_readiness_score_section
+_render_health_breakdown = _render_readiness_breakdown
+_health_badge = _readiness_badge
+_health_label_plain = _readiness_label_plain
+
+
 def _render_warnings_section(warnings: list[dict[str, str]]) -> str:
     cards = []
+
     for warning in warnings:
         level = warning.get("level", "warning")
         title = warning.get("title", "Dataset warning")
@@ -941,35 +1119,48 @@ def _render_warnings_section(warnings: list[dict[str, str]]) -> str:
 
 
 def _render_smart_insights_section(insights: list[str]) -> str:
+    insights = _deduplicate(insights, max_items=6)
     if not insights:
         return ""
 
-    cards = []
-    for insight in _deduplicate(insights):
-        cards.append(
-            f"""
-            <div class="insight-card">
-                <strong>Insight</strong>
-                <p class="card-note">{_safe_text(insight)}</p>
-            </div>
-            """
-        )
+    cards = [
+        f"""
+        <div class="insight-card">
+            <strong>Insight</strong>
+            <p class="card-note">{_safe_text(insight)}</p>
+        </div>
+        """
+        for insight in insights
+    ]
 
     return _render_section(
         title="Smart Insights",
-        intro="Automatically generated observations from data quality, target behavior and feature structure.",
+        intro="Relevant observations from data quality, target behavior and feature structure.",
         body=f'<div class="warning-grid">{"".join(cards)}</div>',
     )
 
 
+def _normalize_warning_level(level: Any) -> str:
+    level = str(level or "warning").lower().strip()
+
+    if level in {"critical", "high", "danger", "error"}:
+        return "danger"
+    if level in {"medium", "warning", "warn"}:
+        return "warning"
+    if level in {"success", "ok", "ready"}:
+        return "success"
+    return "neutral"
+
+
 def _normalize_external_warnings(warnings) -> list[dict[str, str]]:
     normalized = []
+
     for warning in _as_list(warnings):
         if isinstance(warning, dict):
             normalized.append({
-                "level": warning.get("level", "warning"),
-                "title": warning.get("title", "Dataset warning"),
-                "message": warning.get("message", "Review this dataset characteristic before modeling."),
+                "level": _normalize_warning_level(warning.get("level") or warning.get("severity")),
+                "title": warning.get("title") or warning.get("category") or "Dataset warning",
+                "message": warning.get("message") or warning.get("description") or warning.get("recommendation") or "Review this dataset characteristic before modeling.",
             })
         else:
             normalized.append({
@@ -977,16 +1168,19 @@ def _normalize_external_warnings(warnings) -> list[dict[str, str]]:
                 "title": "Dataset warning",
                 "message": str(warning),
             })
+
     return normalized
 
 
 def _render_profile_section(data_profile=None, column_types=None, problem_type=None, target=None) -> str:
     rows = []
+    column_types = _normalize_column_types(column_types)
+    data_profile = data_profile or {}
 
     if problem_type:
-        rows.append({"Metric": "Detected problem type", "Value": problem_type})
+        rows.append({"Metric": "Problem type", "Value": problem_type})
     if target:
-        rows.append({"Metric": "Target column", "Value": target})
+        rows.append({"Metric": "Target", "Value": target})
 
     if data_profile:
         rows.extend([
@@ -995,23 +1189,23 @@ def _render_profile_section(data_profile=None, column_types=None, problem_type=N
             {"Metric": "Missing ratio", "Value": f"{float(data_profile.get('missing_ratio') or 0):.2%}"},
         ])
 
-    if column_types:
-        rows.extend([
-            {"Metric": "Numeric columns", "Value": len(column_types.get("numeric", []))},
-            {"Metric": "Categorical columns", "Value": len(column_types.get("categorical", []))},
-            {"Metric": "Datetime columns", "Value": len(column_types.get("datetime", []))},
-            {"Metric": "Text columns", "Value": len(column_types.get("text", []))},
-            {"Metric": "Potential ID columns", "Value": len(column_types.get("id", []))},
-            {"Metric": "Constant columns", "Value": len(column_types.get("constant", []))},
-            {"Metric": "High-cardinality columns", "Value": len(column_types.get("high_cardinality", []))},
-        ])
+    rows.extend([
+        {"Metric": "Numeric columns", "Value": len(column_types["numeric"])},
+        {"Metric": "Categorical columns", "Value": len(column_types["categorical"])},
+        {"Metric": "Datetime columns", "Value": len(column_types["datetime"])},
+        {"Metric": "Text columns", "Value": len(column_types["text"])},
+        {"Metric": "Potential ID columns", "Value": len(column_types["id"])},
+        {"Metric": "Constant columns", "Value": len(column_types["constant"])},
+        {"Metric": "High-cardinality columns", "Value": len(column_types["high_cardinality"])},
+    ])
 
+    rows = [row for row in rows if row["Value"] not in (None, "")]
     if not rows:
         return ""
 
     return _render_section(
         title="Dataset Profile",
-        intro="Detected metadata used to guide the automated analysis workflow.",
+        intro="Metadata used to guide the automated analysis workflow.",
         body=_render_table(rows),
     )
 
@@ -1043,7 +1237,9 @@ def _render_model_recommendations_section(model_recommendations: list[dict[str, 
 
 
 def _render_next_steps_section(steps: list[str]) -> str:
+    steps = _deduplicate(steps, max_items=7)
     cards = []
+
     for index, step in enumerate(steps, start=1):
         cards.append(
             f"""
@@ -1058,7 +1254,7 @@ def _render_next_steps_section(steps: list[str]) -> str:
 
     return _render_section(
         title="Recommended Next Steps",
-        intro="A practical action plan to move from automated EDA to a reliable machine learning workflow.",
+        intro="A practical action plan to move from automated EDA to a reliable ML workflow.",
         body=body,
     )
 
@@ -1074,7 +1270,7 @@ def _render_plot_card(key: str, title: str, description: str, plots_dir: str) ->
         <div class="plot-card">
             <h4>{_safe_text(title)}</h4>
             <p>{_safe_text(description)}</p>
-            <img src="./{_safe_text(image_path)}" alt="{_safe_text(title)}">
+            <img src="./{_safe_text(image_path)}" alt="{_safe_text(title)}" loading="lazy">
         </div>
     """
 
@@ -1110,24 +1306,38 @@ def _render_plots_section(plots_dir: str, output_dir: Path) -> str:
 
     return _render_section(
         title="Visual Diagnostics",
-        intro="Only relevant plots generated during this run are included and grouped by analytical purpose.",
+        intro="Generated plots are linked from disk instead of embedded, keeping the HTML lighter.",
         body=body,
     )
 
 
 def _render_table(rows: Any) -> str:
-    rows = _as_list(rows)
+    if rows is None:
+        return ""
+
+    try:
+        rows = rows.to_dict(orient="records")
+    except AttributeError:
+        rows = _as_list(rows)
+
     if not rows:
         return ""
 
-    headers = list(rows[0].keys())
+    normalized_rows = []
+    for row in rows:
+        if isinstance(row, dict):
+            normalized_rows.append(row)
+        else:
+            normalized_rows.append({"Value": row})
+
+    headers = list(normalized_rows[0].keys())
     header_html = "".join(f"<th>{_safe_text(header)}</th>" for header in headers)
 
     body_html = "".join(
         "<tr>"
         + "".join(f"<td>{_safe_text(row.get(header, ''))}</td>" for header in headers)
         + "</tr>"
-        for row in rows
+        for row in normalized_rows
     )
 
     return f"""
@@ -1141,23 +1351,20 @@ def _render_table(rows: Any) -> str:
 
 
 def _render_model_results_section(model_results=None) -> str:
-    if model_results is None:
-        return ""
-
-    try:
-        rows = model_results.to_dict(orient="records")
-    except AttributeError:
-        rows = model_results
-
-    if not rows:
+    table = _render_table(model_results)
+    if not table:
         return ""
 
     return _render_section(
         title="Model Benchmark",
         intro="Baseline and candidate models compared using task-appropriate metrics.",
-        body=_render_table(rows),
+        body=table,
     )
 
+
+# =========================================================
+# MAIN PUBLIC FUNCTION
+# =========================================================
 
 def generate_html_report(
     dataset_name,
@@ -1181,32 +1388,40 @@ def generate_html_report(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     rows, columns = dataset_shape
+    rows = int(rows)
+    columns = int(columns)
+    missing_values = int(missing_values or 0)
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    preprocessing_suggestions = _deduplicate(preprocessing_suggestions)
-    model_suggestions = _deduplicate(model_suggestions)
+    column_types = _normalize_column_types(column_types)
+    preprocessing_suggestions = _deduplicate(preprocessing_suggestions, max_items=8)
+    model_suggestions_clean = _as_list(model_suggestions)
 
-    health = _calculate_health_score(
+    readiness = _calculate_readiness_score(
         missing_values=missing_values,
         rows=rows,
         columns=columns,
         preprocessing_suggestions=preprocessing_suggestions,
+        data_profile=data_profile,
+        column_types=column_types,
     )
-    health_score = int(health["total_score"])
+    readiness_score = int(readiness["total_score"])
 
     complexity = _dataset_complexity(
         rows=rows,
         columns=columns,
         preprocessing_suggestions=preprocessing_suggestions,
+        column_types=column_types,
     )
 
     key_findings = _generate_key_findings(
-        dataset_shape=dataset_shape,
+        dataset_shape=(rows, columns),
         missing_values=missing_values,
         preprocessing_suggestions=preprocessing_suggestions,
-        model_suggestions=model_suggestions,
-        health_score=health_score,
+        model_suggestions=model_suggestions_clean,
+        readiness_score=readiness_score,
         complexity=complexity,
+        data_profile=data_profile,
     )
 
     generated_warnings = _generate_dataset_warnings(
@@ -1214,39 +1429,40 @@ def generate_html_report(
         columns=columns,
         missing_values=missing_values,
         preprocessing_suggestions=preprocessing_suggestions,
+        data_profile=data_profile,
+        column_types=column_types,
     )
     external_warnings = _normalize_external_warnings(dataset_warnings)
-    dataset_warnings = external_warnings or generated_warnings
+    dataset_warnings_final = external_warnings or generated_warnings
 
     model_recommendations = _normalize_model_recommendations(
-        model_suggestions=model_suggestions,
+        model_suggestions=model_suggestions_clean,
         preprocessing_suggestions=preprocessing_suggestions,
     )
 
-    next_steps = _deduplicate(next_steps) or _generate_next_steps(
+    next_steps_final = _deduplicate(next_steps, max_items=7) or _generate_next_steps(
         rows=rows,
         columns=columns,
         missing_values=missing_values,
         preprocessing_suggestions=preprocessing_suggestions,
-        model_suggestions=model_suggestions,
+        model_suggestions=model_suggestions_clean,
         model_results=model_results,
+        column_types=column_types,
     )
-    smart_insights = _deduplicate(smart_insights)
+    smart_insights_final = _deduplicate(smart_insights, max_items=6)
 
     hero = f"""
         <section class="hero">
             <h1>Python EDA Toolkit Report</h1>
             <p>
-                Automated exploratory analysis report generated with Python EDA Toolkit.
-                This report summarizes dataset structure, data quality, modeling readiness,
-                recommendations and visual diagnostics in a reusable workflow.
+                Automated exploratory analysis report summarizing structure, data quality,
+                readiness, recommendations and visual diagnostics in a reusable workflow.
             </p>
             <div class="meta">
                 <span class="pill">Dataset: {_safe_text(dataset_name)}</span>
                 <span class="pill">Generated: {_safe_text(generated_at)}</span>
                 <span class="pill">Automated EDA</span>
-                <span class="pill">Explainable Health Score</span>
-                <span class="pill">ML Workflow Ready</span>
+                <span class="pill">Data Readiness Score</span>
             </div>
         </section>
     """
@@ -1267,14 +1483,14 @@ def generate_html_report(
             rows=rows,
             columns=columns,
             missing_values=missing_values,
-            health_score=health_score,
+            readiness_score=readiness_score,
             complexity=complexity,
         )}
 
         {_render_section(
             title="Executive Summary",
-            intro="Automatically generated findings for a fast first understanding of the dataset.",
-            body=_render_list(key_findings, "No key findings available."),
+            intro="Key findings for a fast first understanding of the dataset.",
+            body=_render_list(key_findings, "No key findings available.", max_items=6),
         )}
 
         {_render_profile_section(
@@ -1284,21 +1500,21 @@ def generate_html_report(
             target=target,
         )}
 
-        {_render_health_score_section(health)}
+        {_render_readiness_score_section(readiness)}
 
-        {_render_smart_insights_section(smart_insights)}
+        {_render_smart_insights_section(smart_insights_final)}
 
-        {_render_warnings_section(dataset_warnings)}
+        {_render_warnings_section(dataset_warnings_final)}
 
         {_render_section(
             title="Preprocessing Recommendations",
-            intro="Explainable recommendations based on detected dataset characteristics.",
-            body=_render_list(preprocessing_suggestions, "No critical preprocessing suggestions detected."),
+            intro="Recommended actions based on detected dataset characteristics.",
+            body=_render_list(preprocessing_suggestions, "No critical preprocessing suggestions detected.", max_items=8),
         )}
 
         {_render_model_recommendations_section(model_recommendations)}
 
-        {_render_next_steps_section(next_steps)}
+        {_render_next_steps_section(next_steps_final)}
 
         {_render_model_results_section(model_results)}
 
@@ -1320,3 +1536,5 @@ def generate_html_report(
     print("\nHTML report generated successfully")
     print("=" * 60)
     print(f"Location: {output_file}")
+
+    return output_file

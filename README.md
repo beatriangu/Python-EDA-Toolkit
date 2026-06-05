@@ -1,35 +1,148 @@
-# 🧰 Python EDA Toolkit
+# 🧠 Python EDA Toolkit
 
-Reusable Python toolkit for **Exploratory Data Analysis (EDA)**, **Machine Learning workflows**, **automatic visualizations** and **smart dataset recommendations**.
+> Smart automated exploratory data analysis, scalable visual diagnostics and baseline Machine Learning workflows for structured datasets.
 
-Python EDA Toolkit is a modular and reusable package designed to simplify, standardize and accelerate real-world Data Science workflows across:
+Python EDA Toolkit is a modular and reusable Python framework designed to accelerate real-world Data Science workflows through:
 
-* Jupyter Notebooks
-* Kaggle
+* automated dataset profiling
+* intelligent preprocessing recommendations
+* adaptive visualizations
+* memory-aware analysis pipelines
+* explainable baseline ML benchmarking
+* production-style HTML reporting
+
+Built for:
+
+* Data Analysts
+* Data Scientists
+* Machine Learning practitioners
+* Python developers
+* educational and rapid prototyping workflows
+
+Compatible with:
+
+* Jupyter Notebook
 * Google Colab
-* Machine Learning experiments
-* educational projects
-* rapid prototyping workflows
-
-The toolkit combines:
-
-✅ automated dataset analysis
-✅ explainable smart recommendations
-✅ reusable preprocessing utilities
-✅ automatic visual diagnostics
-✅ baseline model benchmarking
-✅ HTML reporting workflows
+* Kaggle
+* local Python environments
+* reusable ML pipelines
 
 ---
 
-# 🚀 One-Line Intelligent Dataset Analysis
+# ✨ Key Features
+
+## 📊 Smart Automated EDA
+
+Automatically performs:
+
+* dataset inspection
+* duplicate detection
+* missing value analysis
+* skewness analysis
+* outlier detection
+* target analysis
+* ML problem detection
+* high-cardinality detection
+* identifier column detection
+* preprocessing recommendations
+* model recommendations
+
+---
+
+## ⚡ Memory-Aware Large Dataset Processing
+
+Designed to handle medium and large datasets efficiently:
+
+* adaptive row sampling
+* lightweight plotting
+* sparse-safe encoding
+* automatic plot skipping for large datasets
+* controlled model complexity
+* optimized preprocessing pipelines
+
+Example:
+
+```text
+Skipping row-level missing values heatmap (dataset has 114000 rows)
+```
+
+---
+
+## 🤖 Automated Baseline ML Benchmarking
+
+Supports:
+
+* regression workflows
+* classification workflows
+
+Automatically benchmarks:
+
+* Dummy baselines
+* Linear models
+* Tree-based models
+* Gradient boosting models
+
+Includes:
+
+* explainable recommendations
+* scalable defaults
+* safe preprocessing
+* lightweight benchmarking mode
+
+---
+
+## 📈 Adaptive Visual Diagnostics
+
+Automatic generation of:
+
+* target distributions
+* correlation heatmaps
+* numeric distributions
+* categorical distributions
+* missing value diagnostics
+* outlier overviews
+* feature-target relationships
+
+Plots automatically adapt to:
+
+* dataset size
+* feature types
+* memory constraints
+* task type
+
+---
+
+## 📝 Professional HTML Reports
+
+Generate reusable HTML reports including:
+
+* executive summaries
+* dataset readiness scoring
+* preprocessing recommendations
+* model recommendations
+* visual diagnostics
+* ML workflow suggestions
+
+---
+
+# 🚀 Quick Start
+
+## Installation
+
+```bash
+pip install git+https://github.com/beatriangu/Python-EDA-Toolkit.git
+```
+
+---
+
+# ⚡ One-Line Smart Dataset Analysis
 
 ```python
 from python_eda_toolkit import auto_analyze
 
 
 df = auto_analyze(
-    "data.csv",
+    "dataset.csv",
     target="target",
     plots=True,
     save_plots=True,
@@ -37,18 +150,56 @@ df = auto_analyze(
 )
 ```
 
-Automatically performs:
+---
 
-* dataset inspection
-* missing value analysis
-* duplicate detection
-* target analysis
-* class imbalance detection
-* problem type detection
-* preprocessing recommendations
-* model recommendations
-* automatic visualizations
-* HTML report generation
+# 📊 Example Output
+
+```text
+Detected Task Type
+============================================================
+regression
+
+Recommended Models
+============================================================
+- Ridge Regression
+- RandomForestRegressor
+- HistGradientBoostingRegressor
+
+Execution Summary
+============================================================
+Analysis time  : 3.97s
+Modeling time  : 6.90s
+Total time     : 11.13s
+```
+
+---
+
+# 🧠 Data Readiness Score
+
+The toolkit automatically evaluates dataset readiness for Machine Learning workflows.
+
+Example:
+
+| Category          | Score |
+| ----------------- | ----- |
+| Completeness      | 16/20 |
+| Dataset Size      | 20/20 |
+| Feature Structure | 14/20 |
+| Quality Signals   | 14/20 |
+| Model Readiness   | 13/20 |
+
+Final readiness:
+
+```text
+77/100 → ML-ready with review
+```
+
+This helps identify:
+
+* preprocessing effort
+* structural risks
+* scalability concerns
+* feature engineering complexity
 
 ---
 
@@ -72,214 +223,6 @@ Automatically performs:
 
 ---
 
-# ✨ Main Features
-
-## 📊 Automated Dataset Analysis
-
-* Dataset preview
-* Shape analysis
-* Column inspection
-* Data type analysis
-* Memory usage analysis
-* Missing value detection
-* Duplicate detection
-* Target distribution analysis
-* Class imbalance warnings
-* Automatic ML problem detection
-
----
-
-## 🧠 Smart Recommendations
-
-Rule-based and explainable recommendations for:
-
-* preprocessing
-* model selection
-* visualization suggestions
-* identifier column detection
-* scaling recommendations
-* class imbalance detection
-
----
-
-## 📈 Automatic Visualizations
-
-Automatic plot generation including:
-
-* correlation heatmaps
-* target distributions
-* numeric feature distributions
-* missing value maps
-* plot export to PNG
-
----
-
-## 🤖 Machine Learning Utilities
-
-* baseline model benchmarking
-* classification metrics
-* regression metrics
-* confusion matrix utilities
-* model comparison workflows
-
----
-
-## 🧹 Preprocessing Utilities
-
-* CSV / Excel loading
-* outlier detection
-* outlier capping
-* scaling utilities
-* encoding utilities
-* preprocessing helpers
-
----
-
-# 📦 Installation
-
-## Install directly from GitHub
-
-```bash
-pip install git+https://github.com/beatriangu/Python-EDA-Toolkit.git
-```
-
-Recommended for:
-
-* Google Colab
-* Kaggle
-* Jupyter Notebook
-* Local Python environments
-* Machine Learning demos
-
----
-
-## Local Development Setup
-
-Clone the repository:
-
-```bash
-git clone https://github.com/beatriangu/Python-EDA-Toolkit.git
-cd Python-EDA-Toolkit
-```
-
-Create a virtual environment:
-
-```bash
-python -m venv .venv
-```
-
-Activate the environment:
-
-### macOS / Linux
-
-```bash
-source .venv/bin/activate
-```
-
-### Windows
-
-```bash
-.venv\Scripts\activate
-```
-
-Install the package:
-
-```bash
-pip install -e .
-```
-
-Editable mode (`-e`) is recommended for development because source code changes are reflected immediately without reinstalling the package.
-
----
-
-# ⚡ Quick Start
-
-```python
-from python_eda_toolkit import auto_analyze
-
-
-df = auto_analyze(
-    "data/classification/parkinsons.csv",
-    target="status",
-)
-```
-
----
-
-# 📊 Generate Automatic Visualizations
-
-```python
-from python_eda_toolkit import auto_analyze
-
-
-df = auto_analyze(
-    "data/classification/parkinsons.csv",
-    target="status",
-    plots=True,
-)
-```
-
-Generated visualizations may include:
-
-* target distributions
-* correlation heatmaps
-* numeric distributions
-* missing value diagnostics
-
----
-
-# 💾 Export Visualizations
-
-```python
-from python_eda_toolkit.visualization import generate_auto_plots
-
-
-generate_auto_plots(
-    df,
-    target="status",
-    save_plots=True,
-    show=False,
-)
-```
-
-Generated plots are saved to:
-
-```text
-reports/plots/
-```
-
----
-
-# 📝 Generate HTML Reports
-
-```python
-from python_eda_toolkit import auto_analyze
-
-
-df = auto_analyze(
-    "data/classification/parkinsons.csv",
-    target="status",
-    export_html=True,
-)
-```
-
-Generated report:
-
-```text
-reports/analysis_report.html
-```
-
-The report includes:
-
-* dataset overview
-* key findings
-* preprocessing recommendations
-* model recommendations
-* dataset health score
-* visual diagnostics
-
----
-
 # 🤖 Model Benchmarking
 
 ```python
@@ -288,7 +231,8 @@ from python_eda_toolkit.models import compare_models
 
 results = compare_models(
     df,
-    target="status",
+    target="target",
+    mode="fast",
 )
 
 print(results)
@@ -297,33 +241,10 @@ print(results)
 Example output:
 
 ```text
-                    model  accuracy  f1_score
-1      LogisticRegression    0.9231    0.9492
-2  RandomForestClassifier    0.9231    0.9492
-0         DummyClassifier    0.7436    0.8529
-```
-
----
-
-# ☁️ Google Colab Example
-
-Install directly from GitHub:
-
-```python
-!pip install git+https://github.com/beatriangu/Python-EDA-Toolkit.git
-```
-
-Use immediately:
-
-```python
-from python_eda_toolkit import auto_analyze
-
-
-df = auto_analyze(
-    "dataset.csv",
-    target="target",
-    plots=True,
-)
+ rank  model                         r2_score
+    1  RandomForestRegressor           0.1977
+    2  HistGradientBoostingRegressor   0.1512
+    3  Ridge                            0.0253
 ```
 
 ---
@@ -333,19 +254,19 @@ df = auto_analyze(
 ```text
 Python-EDA-Toolkit/
 │
-├── assets/
-├── data/
-├── notebooks/
-├── tests/
-│
 ├── python_eda_toolkit/
 │   ├── eda/
 │   ├── models/
 │   ├── preprocessing/
 │   ├── reporting/
 │   ├── smart/
-│   ├── utils/
-│   └── visualization/
+│   ├── visualization/
+│   └── utils/
+│
+├── reports/
+├── assets/
+├── notebooks/
+├── tests/
 │
 ├── demo.py
 ├── requirements.txt
@@ -360,23 +281,25 @@ Python-EDA-Toolkit/
 * Python
 * Pandas
 * NumPy
+* Scikit-learn
 * Matplotlib
 * Seaborn
-* Scikit-learn
 * SciPy
 * Jupyter Notebook
 
 ---
 
-# 🎯 Project Goals
+# 🎯 Engineering Goals
 
-* Reduce repetitive notebook workflows
-* Accelerate exploratory analysis
-* Standardize EDA pipelines
-* Improve workflow reproducibility
-* Generate explainable recommendations
-* Simplify rapid ML experimentation
-* Showcase clean Python package architecture
+This project focuses on:
+
+* reusable Data Science architecture
+* explainable automated EDA
+* scalable visualization pipelines
+* memory-aware ML workflows
+* practical ML experimentation
+* modular Python package design
+* production-style reporting
 
 ---
 
@@ -384,38 +307,44 @@ Python-EDA-Toolkit/
 
 Planned improvements include:
 
-* advanced HTML reporting
-* time series analysis
-* forecasting helpers
+* CLI support
+* Streamlit dashboard
+* Plotly interactive reports
 * feature importance analysis
-* automatic preprocessing pipelines
-* interactive Plotly dashboards
-* Streamlit integration
-* AutoML starter workflows
-* CLI commands
-* documentation website
+* time series workflows
+* AutoML starter pipelines
+* exportable preprocessing pipelines
+* model persistence utilities
 
 ---
 
-# 🧪 Current Status
+# ✅ Current Status
 
-✅ Modular architecture
-✅ Smart dataset recommendations
-✅ Automatic visualizations
-✅ HTML reporting
-✅ Model benchmarking
-✅ Google Colab compatible
-✅ Local development ready
+* Smart automated EDA
+* Adaptive plotting engine
+* Data Readiness Scoring
+* HTML reporting
+* Baseline ML benchmarking
+* Large dataset support
+* Google Colab compatible
+* Modular architecture
+* Automated recommendations
 
 ---
 
 # 👩‍💻 Author
 
-**Beatriz Lamiquiz**
+## Beatriz Lamiquiz
 
-Python • Data Analysis • Machine Learning • Django • AI
+Python • Data Science • Machine Learning • AI • Django
 
-Passionate about building practical, reusable and scalable solutions using Python, Data Science and Artificial Intelligence.
+Passionate about building practical, scalable and reusable solutions combining:
+
+* Python
+* Data Analysis
+* Machine Learning
+* Artificial Intelligence
+* workflow automation
 
 ---
 
@@ -425,8 +354,9 @@ If you find this project useful:
 
 * ⭐ Star the repository
 * 🍴 Fork it
-* 🚀 Contribute improvements
-* 📊 Use it in your own projects
+* 🚀 Use it in your own workflows
+* 📊 Contribute improvements
+
 
 
 

@@ -201,3 +201,8 @@ assets/tmp/
 # data/processed/
 # data/intermediate/
 
+# =========================================================
+# LARGE OPTIONAL DATASETS
+# =========================================================
+
+data/spotify/
