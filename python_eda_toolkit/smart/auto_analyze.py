@@ -1,30 +1,81 @@
+from pathlib import Path
+
 from python_eda_toolkit.preprocessing.loaders import load_data
 from python_eda_toolkit.smart.recommender import (
     suggest_preprocessing,
     suggest_models,
 )
 from python_eda_toolkit.visualization import generate_auto_plots
+from python_eda_toolkit.reporting import generate_html_report
 
 
-def auto_analyze(data, target=None, plots=False):
+def _print_section(title):
+    """
+    Print a formatted section title.
+    """
+
+    print(f"\n{title}")
+    print("=" * 60)
+
+
+def _get_dataset_name(data):
+    """
+    Infer a readable dataset name from a file path or object.
+    """
+
+    if isinstance(data, str):
+        return Path(data).name
+
+    return "DataFrame"
+
+
+def _detect_problem_type(df, target):
+    """
+    Detect whether a supervised learning problem is likely
+    classification or regression.
+    """
+
+    unique_values = df[target].nunique()
+
+    is_classification = (
+        df[target].dtype == "object"
+        or unique_values <= 15
+    )
+
+    if is_classification:
+        return "classification"
+
+    return "regression"
+
+
+def auto_analyze(
+    data,
+    target=None,
+    plots=False,
+    save_plots=False,
+    export_html=False,
+    report_path="reports/analysis_report.html",
+):
     """
     Automatically load and analyze a dataset.
 
-    This function provides a fast first overview of a dataset,
-    including:
+    This function provides a fast and professional first overview
+    of a dataset, including:
+
     - dataset preview
-    - dimensions
+    - dataset shape
     - column information
     - data types
     - missing values
     - duplicated rows
     - memory usage
-    - target analysis
+    - target distribution
     - class imbalance detection
-    - automatic ML task detection
+    - automatic ML problem type detection
     - preprocessing recommendations
     - model recommendations
     - optional automatic visualizations
+    - optional HTML report generation
 
     Parameters
     ----------
@@ -37,87 +88,96 @@ def auto_analyze(data, target=None, plots=False):
     plots : bool, default=False
         If True, automatically generates exploratory plots.
 
+    save_plots : bool, default=False
+        If True, saves generated plots to disk.
+
+    export_html : bool, default=False
+        If True, generates an HTML analysis report.
+
+    report_path : str, default="reports/analysis_report.html"
+        Path where the HTML report will be saved.
+
     Returns
     -------
     pandas.DataFrame
         Loaded dataset.
     """
 
+    dataset_name = _get_dataset_name(data)
+
     df = load_data(data)
 
-    print("\nDataset Preview")
-    print("=" * 60)
+    _print_section("Dataset Preview")
     print(df.head())
 
-    print("\nDataset Shape")
-    print("=" * 60)
+    _print_section("Dataset Shape")
     print(f"Rows    : {df.shape[0]}")
     print(f"Columns : {df.shape[1]}")
 
-    print("\nColumns")
-    print("=" * 60)
+    _print_section("Columns")
     print(df.columns.tolist())
 
-    print("\nData Types")
-    print("=" * 60)
+    _print_section("Data Types")
     print(df.dtypes)
 
-    print("\nMissing Values")
-    print("=" * 60)
     missing_values = df.isnull().sum()
+    total_missing = missing_values.sum()
+
+    _print_section("Missing Values")
     print(missing_values)
 
-    print("\nTotal Missing Values")
-    print("=" * 60)
-    print(missing_values.sum())
+    _print_section("Total Missing Values")
+    print(total_missing)
 
-    print("\nDuplicated Rows")
-    print("=" * 60)
-    print(df.duplicated().sum())
+    duplicated_rows = df.duplicated().sum()
 
-    print("\nMemory Usage")
-    print("=" * 60)
+    _print_section("Duplicated Rows")
+    print(duplicated_rows)
+
     memory_usage = df.memory_usage(deep=True).sum() / 1024**2
+
+    _print_section("Memory Usage")
     print(f"{memory_usage:.2f} MB")
 
+    problem_type = None
+    target_distribution = None
+    target_percentages = None
+    imbalance_warning = False
+
     if target:
+
         if target not in df.columns:
             raise ValueError(
                 f"Target column '{target}' not found in dataset."
             )
 
-        print("\nTarget Column")
-        print("=" * 60)
+        _print_section("Target Column")
         print(target)
 
-        print("\nTarget Distribution")
-        print("=" * 60)
         target_distribution = df[target].value_counts()
+
+        _print_section("Target Distribution")
         print(target_distribution)
 
-        print("\nTarget Distribution (%)")
-        print("=" * 60)
         target_percentages = (
             df[target]
             .value_counts(normalize=True)
             .mul(100)
             .round(2)
         )
+
+        _print_section("Target Distribution (%)")
         print(target_percentages)
 
-        unique_values = df[target].nunique()
+        problem_type = _detect_problem_type(df, target)
 
-        is_classification = (
-            df[target].dtype == "object"
-            or unique_values <= 15
-        )
-
-        if is_classification:
+        if problem_type == "classification":
             class_ratio = df[target].value_counts(normalize=True)
 
             if class_ratio.max() > 0.70:
-                print("\nClass Imbalance Warning")
-                print("=" * 60)
+                imbalance_warning = True
+
+                _print_section("Class Imbalance Warning")
                 print(
                     "Target appears imbalanced.\n"
                     "Consider using:\n"
@@ -126,18 +186,16 @@ def auto_analyze(data, target=None, plots=False):
                     "- SMOTE or resampling techniques"
                 )
 
-        print("\nProblem Type")
-        print("=" * 60)
+        _print_section("Problem Type")
 
-        if is_classification:
+        if problem_type == "classification":
             print("Classification problem detected")
         else:
             print("Regression problem detected")
 
-    print("\nPreprocessing Suggestions")
-    print("=" * 60)
-
     preprocessing_suggestions = suggest_preprocessing(df)
+
+    _print_section("Preprocessing Suggestions")
 
     if preprocessing_suggestions:
         for suggestion in preprocessing_suggestions:
@@ -145,11 +203,16 @@ def auto_analyze(data, target=None, plots=False):
     else:
         print("No critical preprocessing suggestions detected.")
 
-    if target:
-        print("\nRecommended Models")
-        print("=" * 60)
+    model_suggestions = []
 
-        model_suggestions = suggest_models(df, target=target)
+    if target:
+
+        model_suggestions = suggest_models(
+            df,
+            target=target,
+        )
+
+        _print_section("Recommended Models")
 
         if model_suggestions:
             for suggestion in model_suggestions:
@@ -157,10 +220,26 @@ def auto_analyze(data, target=None, plots=False):
         else:
             print("No model recommendations available.")
 
-    if plots:
-        generate_auto_plots(df, target=target)
+    if plots or save_plots:
 
-    print("\nAnalysis Complete")
-    print("=" * 60)
+        generate_auto_plots(
+            df,
+            target=target,
+            save_plots=save_plots,
+            show=plots,
+        )
+
+    if export_html:
+
+        generate_html_report(
+            dataset_name=dataset_name,
+            dataset_shape=df.shape,
+            missing_values=total_missing,
+            preprocessing_suggestions=preprocessing_suggestions,
+            model_suggestions=model_suggestions,
+            output_path=report_path,
+        )
+
+    _print_section("Analysis Complete")
 
     return df

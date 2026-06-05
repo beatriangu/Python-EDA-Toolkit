@@ -1,27 +1,137 @@
 # 🧰 Python EDA Toolkit
 
-Reusable Python toolkit for Exploratory Data Analysis, Data Visualization, Machine Learning workflows and smart dataset analysis.
+Reusable Python toolkit for **Exploratory Data Analysis (EDA)**, **Machine Learning workflows**, **automatic visualizations** and **smart dataset recommendations**.
 
-Python EDA Toolkit is a modular and reusable package designed to simplify, standardize and accelerate real-world Data Science workflows across notebooks, experiments, Kaggle datasets, Google Colab and Machine Learning projects.
+Python EDA Toolkit is a modular and reusable package designed to simplify, standardize and accelerate real-world Data Science workflows across:
 
-The toolkit can automatically inspect a dataset, detect common issues, recommend preprocessing steps, suggest models, generate visualizations and compare baseline Machine Learning models.
+* Jupyter Notebooks
+* Kaggle
+* Google Colab
+* Machine Learning experiments
+* educational projects
+* rapid prototyping workflows
+
+The toolkit combines:
+
+✅ automated dataset analysis
+✅ explainable smart recommendations
+✅ reusable preprocessing utilities
+✅ automatic visual diagnostics
+✅ baseline model benchmarking
+✅ HTML reporting workflows
 
 ---
 
-# 🚀 Main Features
+# 🚀 One-Line Intelligent Dataset Analysis
 
-* Automatic dataset analysis
-* CSV, Excel and DataFrame loading
-* Missing values and duplicate detection
+```python
+from python_eda_toolkit import auto_analyze
+
+
+df = auto_analyze(
+    "data.csv",
+    target="target",
+    plots=True,
+    save_plots=True,
+    export_html=True,
+)
+```
+
+Automatically performs:
+
+* dataset inspection
+* missing value analysis
+* duplicate detection
+* target analysis
+* class imbalance detection
+* problem type detection
+* preprocessing recommendations
+* model recommendations
+* automatic visualizations
+* HTML report generation
+
+---
+
+# 📸 Example Visualizations
+
+## Correlation Heatmap
+
+![Correlation Heatmap](assets/screenshots/correlation_heatmap.png)
+
+---
+
+## Numeric Feature Distributions
+
+![Numeric Distributions](assets/screenshots/numeric_distributions.png)
+
+---
+
+## Target Distribution
+
+![Target Distribution](assets/screenshots/target_distribution.png)
+
+---
+
+# ✨ Main Features
+
+## 📊 Automated Dataset Analysis
+
+* Dataset preview
+* Shape analysis
+* Column inspection
+* Data type analysis
+* Memory usage analysis
+* Missing value detection
+* Duplicate detection
 * Target distribution analysis
-* Class imbalance detection
-* Automatic problem type detection
-* Smart preprocessing recommendations
-* Smart model recommendations
-* Automatic visualizations
-* Plot export to PNG
-* Model comparison and benchmarking
-* Modular package architecture
+* Class imbalance warnings
+* Automatic ML problem detection
+
+---
+
+## 🧠 Smart Recommendations
+
+Rule-based and explainable recommendations for:
+
+* preprocessing
+* model selection
+* visualization suggestions
+* identifier column detection
+* scaling recommendations
+* class imbalance detection
+
+---
+
+## 📈 Automatic Visualizations
+
+Automatic plot generation including:
+
+* correlation heatmaps
+* target distributions
+* numeric feature distributions
+* missing value maps
+* plot export to PNG
+
+---
+
+## 🤖 Machine Learning Utilities
+
+* baseline model benchmarking
+* classification metrics
+* regression metrics
+* confusion matrix utilities
+* model comparison workflows
+
+---
+
+## 🧹 Preprocessing Utilities
+
+* CSV / Excel loading
+* outlier detection
+* outlier capping
+* scaling utilities
+* encoding utilities
+* preprocessing helpers
 
 ---
 
@@ -39,12 +149,11 @@ Recommended for:
 * Kaggle
 * Jupyter Notebook
 * Local Python environments
-* Data Science experiments
 * Machine Learning demos
 
 ---
 
-## Local development installation
+## Local Development Setup
 
 Clone the repository:
 
@@ -53,79 +162,73 @@ git clone https://github.com/beatriangu/Python-EDA-Toolkit.git
 cd Python-EDA-Toolkit
 ```
 
-Create and activate a virtual environment:
+Create a virtual environment:
 
 ```bash
 python -m venv .venv
+```
+
+Activate the environment:
+
+### macOS / Linux
+
+```bash
 source .venv/bin/activate
 ```
 
-Install the package in editable mode:
+### Windows
+
+```bash
+.venv\Scripts\activate
+```
+
+Install the package:
 
 ```bash
 pip install -e .
 ```
 
-Editable mode is recommended for development because changes in the source code are reflected immediately without reinstalling the package.
+Editable mode (`-e`) is recommended for development because source code changes are reflected immediately without reinstalling the package.
 
 ---
 
 # ⚡ Quick Start
 
-## One-line intelligent dataset analysis
-
 ```python
 from python_eda_toolkit import auto_analyze
 
 
 df = auto_analyze(
-    "data/parkinsons.csv",
-    target="status"
-)
-```
-
-This automatically performs:
-
-* dataset preview
-* shape analysis
-* column inspection
-* data type inspection
-* missing value analysis
-* duplicate detection
-* memory usage analysis
-* target distribution analysis
-* class imbalance warning
-* problem type detection
-* preprocessing recommendations
-* model recommendations
-
----
-
-# 📊 Automatic Visualizations
-
-You can generate automatic plots:
-
-```python
-from python_eda_toolkit import auto_analyze
-
-
-df = auto_analyze(
-    "data/parkinsons.csv",
+    "data/classification/parkinsons.csv",
     target="status",
-    plots=True
 )
 ```
 
-This can generate:
+---
 
-* target distribution plot
-* correlation heatmap
-* numeric feature distributions
-* missing values map, when missing values exist
+# 📊 Generate Automatic Visualizations
+
+```python
+from python_eda_toolkit import auto_analyze
+
+
+df = auto_analyze(
+    "data/classification/parkinsons.csv",
+    target="status",
+    plots=True,
+)
+```
+
+Generated visualizations may include:
+
+* target distributions
+* correlation heatmaps
+* numeric distributions
+* missing value diagnostics
 
 ---
 
-# 💾 Save Plots to Disk
+# 💾 Export Visualizations
 
 ```python
 from python_eda_toolkit.visualization import generate_auto_plots
@@ -135,27 +238,49 @@ generate_auto_plots(
     df,
     target="status",
     save_plots=True,
-    show=False
+    show=False,
 )
 ```
 
-Plots are saved in:
+Generated plots are saved to:
 
 ```text
 reports/plots/
 ```
 
-Example generated files:
+---
+
+# 📝 Generate HTML Reports
+
+```python
+from python_eda_toolkit import auto_analyze
+
+
+df = auto_analyze(
+    "data/classification/parkinsons.csv",
+    target="status",
+    export_html=True,
+)
+```
+
+Generated report:
 
 ```text
-target_distribution.png
-correlation_heatmap.png
-numeric_distributions.png
+reports/analysis_report.html
 ```
+
+The report includes:
+
+* dataset overview
+* key findings
+* preprocessing recommendations
+* model recommendations
+* dataset health score
+* visual diagnostics
 
 ---
 
-# 🤖 Model Comparison
+# 🤖 Model Benchmarking
 
 ```python
 from python_eda_toolkit.models import compare_models
@@ -163,7 +288,7 @@ from python_eda_toolkit.models import compare_models
 
 results = compare_models(
     df,
-    target="status"
+    target="status",
 )
 
 print(results)
@@ -180,145 +305,24 @@ Example output:
 
 ---
 
-# 🧠 Smart Recommendations
+# ☁️ Google Colab Example
 
-The smart module provides rule-based, explainable recommendations for:
-
-* preprocessing
-* visualization
-* model selection
-* problem type detection
-* identifier column detection
-* class imbalance detection
-
-Example:
-
-```python
-from python_eda_toolkit.smart import (
-    suggest_preprocessing,
-    suggest_models,
-    suggest_visualizations,
-)
-
-
-preprocessing = suggest_preprocessing(df)
-models = suggest_models(df, target="status")
-visualizations = suggest_visualizations(df, target="status")
-```
-
----
-
-# 🧹 Preprocessing Utilities
-
-```python
-from python_eda_toolkit.preprocessing import (
-    load_data,
-    detect_outliers_iqr,
-    remove_outliers_iqr,
-    cap_outliers_iqr,
-    standard_scale,
-    minmax_scale,
-    robust_scale,
-    one_hot_encode,
-    label_encode,
-)
-```
-
-Available utilities include:
-
-* CSV and Excel loading
-* DataFrame loading
-* IQR outlier detection
-* Outlier removal
-* Outlier capping
-* Standard scaling
-* MinMax scaling
-* Robust scaling
-* One-hot encoding
-* Label encoding
-
----
-
-# 📈 Visualization Utilities
-
-```python
-from python_eda_toolkit.visualization import (
-    plot_correlation_heatmap,
-    plot_histogram,
-    plot_boxplot,
-    plot_countplot,
-    plot_barplot,
-    plot_scatterplot,
-    plot_missing_values,
-    plot_numeric_distributions,
-    plot_categorical_distributions,
-    generate_auto_plots,
-)
-```
-
-The visualization module includes:
-
-* correlation heatmaps
-* histograms
-* boxplots
-* countplots
-* barplots
-* scatterplots
-* missing value visualizations
-* automatic EDA plots
-* plot saving
-
----
-
-# 🧪 Example Full Workflow
-
-```python
-from python_eda_toolkit import auto_analyze
-from python_eda_toolkit.models import compare_models
-from python_eda_toolkit.visualization import generate_auto_plots
-
-
-df = auto_analyze(
-    "data/parkinsons.csv",
-    target="status",
-    plots=False
-)
-
-generate_auto_plots(
-    df,
-    target="status",
-    save_plots=True,
-    show=False
-)
-
-results = compare_models(
-    df,
-    target="status"
-)
-
-print(results)
-```
-
----
-
-# ☁️ Google Colab Usage
-
-Install the toolkit:
+Install directly from GitHub:
 
 ```python
 !pip install git+https://github.com/beatriangu/Python-EDA-Toolkit.git
 ```
 
-Use it:
+Use immediately:
 
 ```python
 from python_eda_toolkit import auto_analyze
 
 
 df = auto_analyze(
-    "your_dataset.csv",
-    target="target_column",
-    plots=True
+    "dataset.csv",
+    target="target",
+    plots=True,
 )
 ```
 
@@ -329,8 +333,9 @@ df = auto_analyze(
 ```text
 Python-EDA-Toolkit/
 │
+├── assets/
 ├── data/
-├── reports/
+├── notebooks/
 ├── tests/
 │
 ├── python_eda_toolkit/
@@ -342,9 +347,9 @@ Python-EDA-Toolkit/
 │   ├── utils/
 │   └── visualization/
 │
+├── demo.py
 ├── requirements.txt
 ├── setup.py
-├── demo.py
 └── README.md
 ```
 
@@ -365,56 +370,52 @@ Python-EDA-Toolkit/
 
 # 🎯 Project Goals
 
-* Reduce repetitive notebook code
-* Standardize EDA and ML workflows
-* Accelerate experimentation
-* Build reusable utilities
-* Generate explainable smart recommendations
-* Improve visual analysis workflows
-* Support professional and educational Data Science projects
+* Reduce repetitive notebook workflows
+* Accelerate exploratory analysis
+* Standardize EDA pipelines
+* Improve workflow reproducibility
+* Generate explainable recommendations
+* Simplify rapid ML experimentation
 * Showcase clean Python package architecture
 
 ---
 
 # 🗺️ Roadmap
 
-Planned improvements:
+Planned improvements include:
 
-* HTML report generation
-* Better model benchmarking
-* Confusion matrix plots
-* Feature importance plots
-* Automatic preprocessing pipelines
-* Time series utilities
-* Forecasting helpers
-* Interactive Plotly visualizations
+* advanced HTML reporting
+* time series analysis
+* forecasting helpers
+* feature importance analysis
+* automatic preprocessing pipelines
+* interactive Plotly dashboards
 * Streamlit integration
+* AutoML starter workflows
 * CLI commands
-* Documentation website
+* documentation website
 
 ---
 
 # 🧪 Current Status
 
 ✅ Modular architecture
-✅ Reusable package structure
 ✅ Smart dataset recommendations
-✅ Automatic dataset analysis
 ✅ Automatic visualizations
-✅ Plot export system
-✅ Model comparison
-✅ Local development ready
+✅ HTML reporting
+✅ Model benchmarking
 ✅ Google Colab compatible
+✅ Local development ready
 
 ---
 
 # 👩‍💻 Author
 
-Beatriz Lamiquiz
+**Beatriz Lamiquiz**
 
-Python • Data Analysis • Machine Learning • Django • Artificial Intelligence
+Python • Data Analysis • Machine Learning • Django • AI
 
-Passionate about building practical, reusable and scalable solutions using Python, Data Science and AI.
+Passionate about building practical, reusable and scalable solutions using Python, Data Science and Artificial Intelligence.
 
 ---
 
@@ -422,9 +423,10 @@ Passionate about building practical, reusable and scalable solutions using Pytho
 
 If you find this project useful:
 
-* Star the repository
-* Fork it
-* Use it in your own Data Science projects
-* Contribute improvements
+* ⭐ Star the repository
+* 🍴 Fork it
+* 🚀 Contribute improvements
+* 📊 Use it in your own projects
+
 
 
