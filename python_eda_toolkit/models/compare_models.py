@@ -27,6 +27,8 @@ from sklearn.ensemble import (
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
+    precision_score,
+    recall_score,
     mean_absolute_error,
     mean_squared_error,
     r2_score,
@@ -45,12 +47,18 @@ def _detect_task_type(
     Detect whether the target represents classification or regression.
     """
 
-    if task_type != "auto":
-        if task_type not in {"classification", "regression"}:
-            raise ValueError(
-                "task_type must be one of: 'auto', 'classification', 'regression'."
-            )
+    valid_task_types = {
+        "auto",
+        "classification",
+        "regression",
+    }
 
+    if task_type not in valid_task_types:
+        raise ValueError(
+            "task_type must be one of: 'auto', 'classification', 'regression'."
+        )
+
+    if task_type != "auto":
         return task_type
 
     unique_values = y.nunique(dropna=True)
@@ -79,6 +87,7 @@ def _detect_task_type(
 def _validate_inputs(
     df: pd.DataFrame,
     target: str,
+    test_size: float,
 ):
     """
     Validate input dataset and target column.
@@ -98,6 +107,11 @@ def _validate_inputs(
         raise ValueError(
             f"Target column '{target}' not found. "
             f"Available columns: {list(df.columns)}"
+        )
+
+    if not 0 < test_size < 1:
+        raise ValueError(
+            "test_size must be a float between 0 and 1."
         )
 
 
@@ -128,6 +142,28 @@ def _validate_target(
 # PREPROCESSING
 # =========================================================
 
+def _normalize_boolean_columns(
+    X: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Convert boolean columns to integer values.
+
+    This prevents SimpleImputer issues with pandas bool dtypes and keeps
+    already one-hot encoded features directly usable by scikit-learn.
+    """
+
+    X = X.copy()
+
+    bool_columns = X.select_dtypes(
+        include=["bool"],
+    ).columns
+
+    if len(bool_columns) > 0:
+        X[bool_columns] = X[bool_columns].astype("int8")
+
+    return X
+
+
 def _get_feature_groups(
     X: pd.DataFrame,
 ) -> tuple[list[str], list[str]]:
@@ -140,7 +176,7 @@ def _get_feature_groups(
     ).columns.tolist()
 
     categorical_features = X.select_dtypes(
-        include=["object", "string", "category", "bool"],
+        include=["object", "string", "category"],
     ).columns.tolist()
 
     return numeric_features, categorical_features
@@ -232,6 +268,7 @@ def _get_classification_models(
         ),
         "LogisticRegression": LogisticRegression(
             max_iter=1000,
+            random_state=random_state,
         ),
         "RandomForestClassifier": RandomForestClassifier(
             n_estimators=200,
@@ -282,6 +319,20 @@ def _evaluate_classification(
         predictions,
     )
 
+    precision = precision_score(
+        y_test,
+        predictions,
+        average="weighted",
+        zero_division=0,
+    )
+
+    recall = recall_score(
+        y_test,
+        predictions,
+        average="weighted",
+        zero_division=0,
+    )
+
     f1 = f1_score(
         y_test,
         predictions,
@@ -291,6 +342,8 @@ def _evaluate_classification(
 
     return {
         "accuracy": round(accuracy, 4),
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
         "f1_score": round(f1, 4),
     }
 
@@ -332,19 +385,48 @@ def _sort_results(
     task_type: str,
 ) -> pd.DataFrame:
     """
-    Sort results by the most relevant metric.
+    Sort successful results by the most relevant metric.
     """
 
     if task_type == "classification":
         return results_df.sort_values(
-            by="f1_score",
+            by=["f1_score", "accuracy"],
             ascending=False,
         )
 
     return results_df.sort_values(
-        by="r2_score",
-        ascending=False,
+        by=["r2_score", "rmse"],
+        ascending=[False, True],
     )
+
+
+def _add_ranking_columns(
+    results_df: pd.DataFrame,
+    task_type: str,
+) -> pd.DataFrame:
+    """
+    Add rank and best model indicator to successful results.
+    """
+
+    results_df = results_df.copy()
+
+    if results_df.empty:
+        return results_df
+
+    results_df.insert(
+        0,
+        "rank",
+        range(1, len(results_df) + 1),
+    )
+
+    results_df["is_best_model"] = results_df["rank"] == 1
+
+    if task_type == "classification":
+        results_df["primary_metric"] = "f1_score"
+    else:
+        results_df["primary_metric"] = "r2_score"
+
+    return results_df
 
 
 # =========================================================
@@ -367,12 +449,16 @@ def compare_models(
 
     Features:
     - automatic task detection
+    - boolean feature support
     - numerical imputation
     - categorical imputation
     - one-hot encoding
     - numerical scaling
     - safe train/test splitting
     - robust metric selection
+    - model ranking
+    - best model indicator
+    - per-model error reporting
     """
 
     # =====================================================
@@ -382,6 +468,7 @@ def compare_models(
     _validate_inputs(
         df=df,
         target=target,
+        test_size=test_size,
     )
 
     df = df.copy()
@@ -409,6 +496,8 @@ def compare_models(
     X = df.drop(
         columns=[target],
     )
+
+    X = _normalize_boolean_columns(X)
 
     numeric_features, categorical_features = _get_feature_groups(X)
 
@@ -496,6 +585,7 @@ def compare_models(
                 {
                     "task_type": detected_task_type,
                     "model": name,
+                    "status": "success",
                     **metrics,
                 }
             )
@@ -505,6 +595,7 @@ def compare_models(
                 {
                     "task_type": detected_task_type,
                     "model": name,
+                    "status": "failed",
                     "error": str(error),
                 }
             )
@@ -515,25 +606,33 @@ def compare_models(
 
     results_df = pd.DataFrame(results)
 
+    if "error" not in results_df.columns:
+        results_df["error"] = pd.NA
+
     successful_results = results_df[
-        ~results_df.get("error", pd.Series(index=results_df.index)).notna()
-    ]
+        results_df["status"] == "success"
+    ].copy()
+
+    failed_results = results_df[
+        results_df["status"] == "failed"
+    ].copy()
 
     if successful_results.empty:
-        return results_df
+        return results_df.reset_index(drop=True)
 
     sorted_successful_results = _sort_results(
         results_df=successful_results,
         task_type=detected_task_type,
     )
 
-    failed_results = results_df[
-        results_df.get("error", pd.Series(index=results_df.index)).notna()
-    ]
+    ranked_successful_results = _add_ranking_columns(
+        results_df=sorted_successful_results,
+        task_type=detected_task_type,
+    )
 
     return pd.concat(
         [
-            sorted_successful_results,
+            ranked_successful_results,
             failed_results,
         ],
         ignore_index=True,

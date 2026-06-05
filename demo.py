@@ -6,9 +6,9 @@ from python_eda_toolkit.models import compare_models
 # CONFIGURATION
 # =========================================================
 
-CSV_PATH = "data/regression/housing.csv"
+CSV_PATH = "data/regression/coches/Datos_coches_procesados.csv"
 
-TARGET = "median_house_value"
+TARGET = "Precio"
 
 TASK_TYPE = "auto"
 
