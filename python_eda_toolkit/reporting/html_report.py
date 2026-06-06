@@ -31,6 +31,7 @@ _STYLES = """
     --muted: #6b7280;
     --primary: #234e70;
     --secondary: #3a7ca5;
+    --accent: #0ea5e9;
     --success: #2f855a;
     --warning: #b7791f;
     --danger: #b91c1c;
@@ -38,6 +39,29 @@ _STYLES = """
     --soft: #f8fafc;
     --soft-blue: #eef6fb;
     --shadow: 0 10px 25px rgba(31, 41, 55, 0.06);
+    --shadow-lg: 0 20px 40px rgba(31, 41, 55, 0.10);
+    --radius: 20px;
+    --nav-width: 220px;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fillBar {
+    from { width: 0; }
+    to   { width: var(--width); }
+}
+
+@keyframes spinScore {
+    from { background: conic-gradient(var(--secondary) 0%, #e5e7eb 0); }
+    to   { background: conic-gradient(var(--secondary) var(--score), #e5e7eb 0); }
+}
+
+@keyframes countUp {
+    from { opacity: 0.3; }
+    to   { opacity: 1; }
 }
 
 * { box-sizing: border-box; }
@@ -45,59 +69,167 @@ _STYLES = """
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-    background: linear-gradient(135deg, #eef4fb 0%, #f9fbfd 100%);
+    background: linear-gradient(135deg, #eef4fb 0%, #f0f7ff 50%, #f9fbfd 100%);
     color: var(--text);
 }
 
-.page {
-    max-width: 1240px;
+/* ── Layout ── */
+.layout {
+    display: flex;
+    align-items: flex-start;
+    max-width: 1460px;
     margin: 0 auto;
-    padding: 48px 32px;
+    padding: 48px 24px;
+    gap: 28px;
 }
 
-.hero {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
+.page {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── Sidebar nav ── */
+.sidenav {
+    width: var(--nav-width);
+    flex-shrink: 0;
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 14px;
+}
+
+.sidenav-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin: 0 0 12px 6px;
+    font-weight: 700;
+}
+
+.sidenav a {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidenav a:hover,
+.sidenav a.active {
+    background: var(--soft-blue);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* ── Print / Export button ── */
+.toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+
+.btn-primary {
+    background: var(--primary);
     color: white;
-    padding: 46px;
+}
+
+/* ── Hero ── */
+.hero {
+    background: linear-gradient(135deg, var(--primary) 0%, #1a6b99 50%, var(--secondary) 100%);
+    color: white;
+    padding: 50px 50px 46px;
     border-radius: 28px;
-    box-shadow: 0 24px 55px rgba(35, 78, 112, 0.25);
-    margin-bottom: 32px;
+    box-shadow: 0 24px 55px rgba(35, 78, 112, 0.28);
+    margin-bottom: 28px;
+    animation: fadeInUp 0.5s ease both;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: "";
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    pointer-events: none;
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+    bottom: -40px; left: 30%;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    pointer-events: none;
 }
 
 .hero h1 {
     margin: 0 0 12px 0;
-    font-size: 42px;
+    font-size: 40px;
     letter-spacing: -0.8px;
+    line-height: 1.15;
 }
 
 .hero p {
     margin: 0;
-    max-width: 920px;
-    font-size: 17px;
-    line-height: 1.65;
-    opacity: 0.96;
+    max-width: 820px;
+    font-size: 16px;
+    line-height: 1.7;
+    opacity: 0.92;
 }
 
 .meta {
     margin-top: 26px;
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 10px;
 }
 
 .pill {
-    background: rgba(255,255,255,0.16);
-    border: 1px solid rgba(255,255,255,0.25);
-    padding: 8px 13px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    padding: 7px 14px;
     border-radius: 999px;
-    font-size: 13px;
+    font-size: 12.5px;
+    backdrop-filter: blur(4px);
 }
 
+/* ── Metric grid ── */
 .grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 18px;
-    margin-bottom: 28px;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
 .metric-card,
@@ -113,48 +245,82 @@ body {
 
 .metric-card {
     border-radius: 18px;
-    padding: 24px;
+    padding: 22px 20px;
+    transition: transform 0.18s, box-shadow 0.18s;
+    animation: fadeInUp 0.45s ease both;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.metric-card::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--secondary), var(--accent));
+    border-radius: 18px 18px 0 0;
 }
 
 .metric-label {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.09em;
     margin-bottom: 10px;
+    font-weight: 600;
 }
 
 .metric-value {
-    font-size: 30px;
+    font-size: 28px;
     font-weight: 800;
     color: var(--primary);
+    letter-spacing: -0.5px;
 }
 
 .metric-subtitle {
-    margin-top: 8px;
+    margin-top: 10px;
     color: var(--muted);
-    font-size: 14px;
+    font-size: 13px;
 }
 
+/* ── Sections ── */
 .section {
     border-radius: 22px;
-    padding: 30px;
-    margin-bottom: 28px;
+    padding: 30px 32px;
+    margin-bottom: 24px;
+    animation: fadeInUp 0.45s ease both;
+    scroll-margin-top: 24px;
 }
 
 .section h2 {
-    margin: 0 0 14px 0;
+    margin: 0 0 6px 0;
     color: var(--primary);
-    font-size: 25px;
+    font-size: 23px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-icon {
+    font-size: 20px;
+    opacity: 0.75;
 }
 
 .section-intro {
     color: var(--muted);
-    margin-top: -4px;
+    margin-top: 2px;
     margin-bottom: 22px;
     line-height: 1.65;
+    font-size: 14.5px;
 }
 
+/* ── Lists ── */
 .clean-list {
     list-style: none;
     padding: 0;
@@ -163,81 +329,95 @@ body {
 
 .clean-list li {
     position: relative;
-    padding: 14px 16px 14px 44px;
+    padding: 13px 16px 13px 44px;
     background: var(--soft);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    margin-bottom: 10px;
+    border-radius: 12px;
+    margin-bottom: 9px;
     line-height: 1.55;
+    font-size: 14.5px;
+    transition: background 0.15s;
 }
+
+.clean-list li:hover { background: var(--soft-blue); }
 
 .clean-list li::before {
     content: "✓";
     position: absolute;
     left: 16px;
-    top: 14px;
+    top: 13px;
     color: var(--success);
     font-weight: bold;
 }
 
+/* ── Badges ── */
 .badge {
     display: inline-block;
-    padding: 8px 12px;
+    padding: 5px 11px;
     border-radius: 999px;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 12px;
+    letter-spacing: 0.02em;
 }
 
 .badge-success { background: #e6f4ea; color: var(--success); }
 .badge-warning { background: #fff7e6; color: var(--warning); }
-.badge-danger { background: #fee2e2; color: var(--danger); }
+.badge-danger  { background: #fee2e2; color: var(--danger); }
 .badge-neutral { background: var(--soft-blue); color: var(--primary); }
+.badge-accent  { background: #e0f2fe; color: #0369a1; }
 
+/* ── Score circle ── */
 .score-wrapper {
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: 32px;
     flex-wrap: wrap;
 }
 
 .score-circle {
-    width: 140px;
-    height: 140px;
+    width: 148px;
+    height: 148px;
     border-radius: 50%;
     background: conic-gradient(var(--secondary) var(--score), #e5e7eb 0);
     display: flex;
     align-items: center;
     justify-content: center;
+    animation: spinScore 1.2s ease both;
+    box-shadow: 0 0 0 6px #eef4fb;
 }
 
 .score-inner {
-    width: 100px;
-    height: 100px;
+    width: 108px;
+    height: 108px;
     background: white;
     border-radius: 50%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .score-number {
-    font-size: 30px;
+    font-size: 32px;
     font-weight: 800;
     color: var(--primary);
+    line-height: 1;
 }
 
 .score-label {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
+    margin-top: 2px;
 }
 
+/* ── Breakdown / model grids ── */
 .breakdown-grid,
 .warning-grid,
 .next-steps-grid,
 .model-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 14px;
 }
 
@@ -246,7 +426,14 @@ body {
     border: 1px solid var(--border);
     background: var(--soft);
     border-radius: 16px;
-    padding: 16px;
+    padding: 18px;
+    transition: box-shadow 0.18s, transform 0.18s;
+}
+
+.breakdown-card:hover,
+.model-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
 }
 
 .breakdown-title,
@@ -258,10 +445,11 @@ body {
     margin-bottom: 12px;
     color: var(--primary);
     font-weight: 800;
+    font-size: 14px;
 }
 
 .progress-track {
-    height: 10px;
+    height: 8px;
     background: #e5e7eb;
     border-radius: 999px;
     overflow: hidden;
@@ -270,8 +458,9 @@ body {
 .progress-fill {
     height: 100%;
     width: var(--width);
-    background: linear-gradient(90deg, var(--secondary), var(--primary));
+    background: linear-gradient(90deg, var(--accent), var(--primary));
     border-radius: 999px;
+    animation: fillBar 1s ease both;
 }
 
 .breakdown-note,
@@ -279,96 +468,128 @@ body {
 .card-note {
     margin: 10px 0 0 0;
     color: var(--muted);
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.warning-card,
-.next-step-card,
-.insight-card {
-    border-radius: 16px;
-    padding: 16px;
+    font-size: 13.5px;
     line-height: 1.55;
 }
 
-.warning-card.warning { border-left: 5px solid var(--warning); background: #fffaf0; }
-.warning-card.danger { border-left: 5px solid var(--danger); background: #fff5f5; }
-.warning-card.success { border-left: 5px solid var(--success); background: #f0fff4; }
-.warning-card.neutral { border-left: 5px solid var(--secondary); background: var(--soft-blue); }
+/* ── Warning / insight cards ── */
+.warning-card,
+.next-step-card,
+.insight-card {
+    border-radius: 14px;
+    padding: 16px 18px;
+    line-height: 1.55;
+}
 
+.warning-card.warning { border-left: 4px solid var(--warning); background: #fffaf0; }
+.warning-card.danger  { border-left: 4px solid var(--danger);  background: #fff5f5; }
+.warning-card.success { border-left: 4px solid var(--success); background: #f0fff4; }
+.warning-card.neutral { border-left: 4px solid var(--secondary); background: var(--soft-blue); }
+
+.insight-card.positive { border-left: 4px solid var(--success); background: #f0fff4; }
+.insight-card.negative { border-left: 4px solid #ef4444; background: #fff5f5; }
+.insight-card.neutral  { border-left: 4px solid var(--secondary); background: var(--soft-blue); }
+.insight-card.info     { border-left: 4px solid var(--accent); background: #f0f9ff; }
+
+.insight-tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    opacity: 0.7;
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* ── Next steps ── */
 .next-step-card {
     background: var(--soft);
     display: flex;
-    gap: 12px;
+    gap: 14px;
     align-items: flex-start;
+    transition: background 0.15s;
 }
+
+.next-step-card:hover { background: var(--soft-blue); }
 
 .step-number {
     min-width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: var(--primary);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 800;
     font-size: 13px;
+    flex-shrink: 0;
 }
 
-.plot-group { margin-top: 28px; }
+/* ── Plot section ── */
+.plot-group { margin-top: 32px; }
 
 .plot-group h3 {
     color: var(--primary);
-    margin: 0 0 14px 0;
-    font-size: 21px;
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 700;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--soft-blue);
 }
 
 .plots-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-    gap: 24px;
+    gap: 22px;
 }
 
 .plot-card {
-    border-radius: 20px;
+    border-radius: 18px;
     padding: 22px;
+    transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.plot-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .plot-card h4 {
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
     color: var(--primary);
-    font-size: 19px;
+    font-size: 17px;
+    font-weight: 700;
 }
 
 .plot-card p {
-    margin: 0 0 18px 0;
+    margin: 0 0 16px 0;
     color: var(--muted);
     line-height: 1.55;
+    font-size: 13.5px;
 }
 
 .plot-card img {
     width: 100%;
     max-height: 780px;
     object-fit: contain;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid var(--border);
     background: white;
 }
 
-.table-wrapper { overflow-x: auto; }
+/* ── Tables ── */
+.table-wrapper { overflow-x: auto; border-radius: 14px; border: 1px solid var(--border); }
 
 table {
     width: 100%;
     border-collapse: collapse;
     background: white;
-    border-radius: 14px;
-    overflow: hidden;
 }
 
 th, td {
     text-align: left;
-    padding: 14px 16px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border);
     font-size: 14px;
 }
@@ -378,23 +599,38 @@ th {
     color: var(--primary);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    font-size: 12px;
+    font-size: 11.5px;
+    font-weight: 700;
 }
 
+tr:hover td { background: var(--soft-blue); }
 tr:last-child td { border-bottom: none; }
 
+/* ── Footer ── */
 .footer {
     text-align: center;
     color: var(--muted);
     font-size: 13px;
-    padding: 24px;
+    padding: 32px 24px 16px;
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
 }
 
+.footer a { color: var(--secondary); text-decoration: none; }
+
+/* ── Print ── */
 @media print {
     body { background: white; }
+    .sidenav, .toolbar { display: none !important; }
+    .layout { display: block; padding: 0; }
     .page { padding: 20px; }
     .section, .metric-card, .plot-card { box-shadow: none; break-inside: avoid; }
-    .hero { box-shadow: none; }
+    .hero { box-shadow: none; -webkit-print-color-adjust: exact; }
+}
+
+@media (max-width: 1200px) {
+    .sidenav { display: none; }
+    .layout { padding: 32px 16px; }
 }
 
 @media (max-width: 1100px) {
@@ -992,10 +1228,30 @@ def _normalize_model_recommendations(model_suggestions, preprocessing_suggestion
 # HTML RENDERERS
 # =========================================================
 
+_SECTION_ICONS = {
+    "Executive Summary": "📋",
+    "Dataset Profile": "🗂",
+    "Data Readiness Score": "🎯",
+    "Smart Insights": "💡",
+    "Dataset Warnings": "⚠️",
+    "Preprocessing Recommendations": "🔧",
+    "Model Recommendations": "🤖",
+    "Recommended Next Steps": "🚀",
+    "Model Benchmark": "📊",
+    "Visual Diagnostics": "🖼",
+}
+
+
+def _section_id(title: str) -> str:
+    return "sec-" + title.lower().replace(" ", "-").replace("/", "")
+
+
 def _render_section(title: str, intro: str, body: str) -> str:
+    icon = _SECTION_ICONS.get(title, "")
+    icon_html = f'<span class="section-icon">{icon}</span>' if icon else ""
     return f"""
-        <section class="section">
-            <h2>{_safe_text(title)}</h2>
+        <section class="section" id="{_section_id(title)}">
+            <h2>{icon_html}{_safe_text(title)}</h2>
             <p class="section-intro">{_safe_text(intro)}</p>
             {body}
         </section>
@@ -1118,20 +1374,37 @@ def _render_warnings_section(warnings: list[dict[str, str]]) -> str:
     )
 
 
+def _insight_level(text: str) -> tuple[str, str]:
+    """Return (css_class, label) based on insight content."""
+    t = text.lower()
+    negative_terms = ("outlier", "skew", "missing", "duplicate", "high cardinality", "exclude", "caution")
+    positive_terms = ("strongest", "best", "recommend", "ready", "no missing", "complete")
+    info_terms = ("detect", "setup", "contain", "found", "numerical and categorical", "regression", "classification")
+    if any(k in t for k in negative_terms):
+        return "negative", "Warning"
+    if any(k in t for k in positive_terms):
+        return "positive", "Positive signal"
+    if any(k in t for k in info_terms):
+        return "info", "Info"
+    return "neutral", "Insight"
+
+
 def _render_smart_insights_section(insights: list[str]) -> str:
     insights = _deduplicate(insights, max_items=6)
     if not insights:
         return ""
 
-    cards = [
-        f"""
-        <div class="insight-card">
-            <strong>Insight</strong>
-            <p class="card-note">{_safe_text(insight)}</p>
-        </div>
-        """
-        for insight in insights
-    ]
+    cards = []
+    for insight in insights:
+        level, label = _insight_level(insight)
+        cards.append(
+            f"""
+            <div class="insight-card {level}">
+                <span class="insight-tag">{_safe_text(label)}</span>
+                <p class="card-note" style="margin-top:4px;">{_safe_text(insight)}</p>
+            </div>
+            """
+        )
 
     return _render_section(
         title="Smart Insights",
@@ -1210,18 +1483,28 @@ def _render_profile_section(data_profile=None, column_types=None, problem_type=N
     )
 
 
+def _model_badge(model_name: str) -> str:
+    t = model_name.lower()
+    if "dummy" in t or "baseline" in t:
+        return _render_badge("Baseline", "warning")
+    if "gradient" in t or "boost" in t or "xgboost" in t or "lightgbm" in t or "catboost" in t:
+        return _render_badge("Advanced", "accent")
+    return _render_badge("Candidate", "neutral")
+
+
 def _render_model_recommendations_section(model_recommendations: list[dict[str, str]]) -> str:
     if not model_recommendations:
         body = _render_list([], "No model recommendations available.")
     else:
         cards = []
         for item in model_recommendations:
+            model_name = item.get("model", "Model")
             cards.append(
                 f"""
                 <div class="model-card">
                     <div class="model-title">
-                        <span>{_safe_text(item.get("model", "Model"))}</span>
-                        {_render_badge("Candidate", "neutral")}
+                        <span>{_safe_text(model_name)}</span>
+                        {_model_badge(model_name)}
                     </div>
                     <p class="model-reason">{_safe_text(item.get("reason", "Compare this model against the baseline."))}</p>
                 </div>
@@ -1451,6 +1734,56 @@ def generate_html_report(
     )
     smart_insights_final = _deduplicate(smart_insights, max_items=6)
 
+    _NAV_SECTIONS = [
+        "Executive Summary",
+        "Dataset Profile",
+        "Data Readiness Score",
+        "Smart Insights",
+        "Dataset Warnings",
+        "Preprocessing Recommendations",
+        "Model Recommendations",
+        "Recommended Next Steps",
+        "Visual Diagnostics",
+    ]
+    nav_links = "".join(
+        f'<a href="#{_section_id(s)}">{s}</a>'
+        for s in _NAV_SECTIONS
+    )
+
+    sidenav_html = f"""
+        <nav class="sidenav" id="sidenav">
+            <div class="sidenav-title">Sections</div>
+            {nav_links}
+        </nav>
+    """
+
+    toolbar_html = """
+        <div class="toolbar">
+            <button class="btn btn-primary" onclick="window.print()">⎙ Print / Save PDF</button>
+        </div>
+    """
+
+    scroll_spy_js = """
+    <script>
+    (function() {
+        var sections = document.querySelectorAll('.section[id]');
+        var links = document.querySelectorAll('.sidenav a');
+        function onScroll() {
+            var scrollY = window.scrollY + 80;
+            var current = '';
+            sections.forEach(function(sec) {
+                if (sec.offsetTop <= scrollY) current = sec.id;
+            });
+            links.forEach(function(a) {
+                a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+            });
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    })();
+    </script>
+    """
+
     hero = f"""
         <section class="hero">
             <h1>Python EDA Toolkit Report</h1>
@@ -1459,10 +1792,10 @@ def generate_html_report(
                 readiness, recommendations and visual diagnostics in a reusable workflow.
             </p>
             <div class="meta">
-                <span class="pill">Dataset: {_safe_text(dataset_name)}</span>
-                <span class="pill">Generated: {_safe_text(generated_at)}</span>
-                <span class="pill">Automated EDA</span>
-                <span class="pill">Data Readiness Score</span>
+                <span class="pill">📦 Dataset: {_safe_text(dataset_name)}</span>
+                <span class="pill">🕐 Generated: {_safe_text(generated_at)}</span>
+                <span class="pill">⚡ Automated EDA</span>
+                <span class="pill">🎯 Readiness: {readiness_score}/100</span>
             </div>
         </section>
     """
@@ -1472,61 +1805,68 @@ def generate_html_report(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python EDA Toolkit Report</title>
+    <title>EDA Report — {_safe_text(dataset_name)}</title>
     <style>{_STYLES}</style>
 </head>
 <body>
-    <main class="page">
-        {hero}
+    <div class="layout">
+        {sidenav_html}
+        <main class="page">
+            {toolbar_html}
+            {hero}
 
-        {_render_metrics_grid(
-            rows=rows,
-            columns=columns,
-            missing_values=missing_values,
-            readiness_score=readiness_score,
-            complexity=complexity,
-        )}
+            {_render_metrics_grid(
+                rows=rows,
+                columns=columns,
+                missing_values=missing_values,
+                readiness_score=readiness_score,
+                complexity=complexity,
+            )}
 
-        {_render_section(
-            title="Executive Summary",
-            intro="Key findings for a fast first understanding of the dataset.",
-            body=_render_list(key_findings, "No key findings available.", max_items=6),
-        )}
+            {_render_section(
+                title="Executive Summary",
+                intro="Key findings for a fast first understanding of the dataset.",
+                body=_render_list(key_findings, "No key findings available.", max_items=6),
+            )}
 
-        {_render_profile_section(
-            data_profile=data_profile,
-            column_types=column_types,
-            problem_type=problem_type,
-            target=target,
-        )}
+            {_render_profile_section(
+                data_profile=data_profile,
+                column_types=column_types,
+                problem_type=problem_type,
+                target=target,
+            )}
 
-        {_render_readiness_score_section(readiness)}
+            {_render_readiness_score_section(readiness)}
 
-        {_render_smart_insights_section(smart_insights_final)}
+            {_render_smart_insights_section(smart_insights_final)}
 
-        {_render_warnings_section(dataset_warnings_final)}
+            {_render_warnings_section(dataset_warnings_final)}
 
-        {_render_section(
-            title="Preprocessing Recommendations",
-            intro="Recommended actions based on detected dataset characteristics.",
-            body=_render_list(preprocessing_suggestions, "No critical preprocessing suggestions detected.", max_items=8),
-        )}
+            {_render_section(
+                title="Preprocessing Recommendations",
+                intro="Recommended actions based on detected dataset characteristics.",
+                body=_render_list(preprocessing_suggestions, "No critical preprocessing suggestions detected.", max_items=8),
+            )}
 
-        {_render_model_recommendations_section(model_recommendations)}
+            {_render_model_recommendations_section(model_recommendations)}
 
-        {_render_next_steps_section(next_steps_final)}
+            {_render_next_steps_section(next_steps_final)}
 
-        {_render_model_results_section(model_results)}
+            {_render_model_results_section(model_results)}
 
-        {_render_plots_section(
-            plots_dir=plots_dir,
-            output_dir=output_dir,
-        )}
+            {_render_plots_section(
+                plots_dir=plots_dir,
+                output_dir=output_dir,
+            )}
 
-        <div class="footer">
-            Generated with Python EDA Toolkit · Smart, reusable EDA and Machine Learning workflow assistant
-        </div>
-    </main>
+            <div class="footer">
+                Generated with <strong>Python EDA Toolkit</strong> &middot;
+                Smart, reusable EDA and Machine Learning workflow assistant &middot;
+                {_safe_text(generated_at)}
+            </div>
+        </main>
+    </div>
+    {scroll_spy_js}
 </body>
 </html>
 """

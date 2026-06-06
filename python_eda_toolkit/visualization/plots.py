@@ -4,7 +4,7 @@ plots.py
 Professional reusable visualization utilities for Exploratory Data Analysis (EDA).
 
 This module provides clean, reusable and production-friendly plotting functions
-for numerical, categorical and missing-value analysis.
+for numerical, categorical, missing-value analysis and model benchmark visuals.
 
 Features
 --------
@@ -13,7 +13,8 @@ Features
 - Supports saving figures
 - Supports custom axes
 - Validates inputs
-- Designed for notebooks, scripts and reusable packages
+- Keeps backward-compatible public plotting functions
+- Adds smarter categorical handling: Top-N + Others + high-cardinality skip
 """
 
 from __future__ import annotations
@@ -41,6 +42,10 @@ sns.set_theme(
 )
 
 
+DEFAULT_TOP_CATEGORIES = 15
+DEFAULT_MAX_UNIQUE_FOR_CATEGORICAL_PLOT = 1_000
+
+
 def _finalize_plot(
     title: str | None = None,
     xlabel: str | None = None,
@@ -54,7 +59,7 @@ def _finalize_plot(
     Apply final plot formatting, save if requested, and optionally show/close.
     """
     if title:
-        plt.title(title)
+        plt.title(title, fontsize=14, fontweight="bold")
 
     if xlabel:
         plt.xlabel(xlabel)
@@ -77,6 +82,45 @@ def _finalize_plot(
 
     if close:
         plt.close()
+
+
+def _safe_value_counts(
+    series: pd.Series,
+    max_categories: int = DEFAULT_TOP_CATEGORIES,
+    max_unique_for_plot: int = DEFAULT_MAX_UNIQUE_FOR_CATEGORICAL_PLOT,
+) -> pd.Series | None:
+    """
+    Return category counts safely.
+
+    - If cardinality is very high, return None to avoid unreadable plots.
+    - If cardinality is moderate, return Top-N + Others.
+    - If cardinality is small, return all categories.
+    """
+    counts = (
+        series
+        .astype("string")
+        .fillna("Missing")
+        .value_counts(dropna=False)
+    )
+
+    unique_count = len(counts)
+
+    if unique_count == 0:
+        return None
+
+    if unique_count > max_unique_for_plot:
+        return None
+
+    if unique_count > max_categories:
+        top_counts = counts.head(max_categories).copy()
+        others = counts.iloc[max_categories:].sum()
+
+        if others > 0:
+            top_counts.loc["Others"] = others
+
+        return top_counts
+
+    return counts
 
 
 def plot_correlation_heatmap(
@@ -203,8 +247,43 @@ def plot_countplot(
 ) -> None:
     """
     Plot category frequencies for a categorical variable.
+
+    This keeps the original API, but internally protects the plot from
+    high-cardinality columns by using Top-N + Others when order is not given.
     """
     validate_column(df, column)
+
+    if order is None:
+        counts = _safe_value_counts(df[column])
+
+        if counts is None:
+            print(
+                f"Skipping '{column}' "
+                f"(too many categories for a readable countplot)."
+            )
+            return
+
+        plt.figure(figsize=figsize)
+
+        ax = sns.barplot(
+            x=counts.values,
+            y=counts.index,
+            color=color,
+            edgecolor="black",
+        )
+
+        for container in ax.containers:
+            ax.bar_label(container, fmt="%d", padding=3, fontsize=9)
+
+        _finalize_plot(
+            title=f"Top Categories: {column}",
+            xlabel="Count",
+            ylabel="Category",
+            save_path=save_path,
+            show=show,
+            close=close,
+        )
+        return
 
     plt.figure(figsize=figsize)
 
@@ -390,31 +469,181 @@ def plot_categorical_distributions(
     close: bool = False,
 ) -> None:
     """
-    Plot countplots for categorical columns with a limited number of unique values.
+    Plot countplots for categorical columns.
+
+    Backward-compatible behavior:
+    - Low-cardinality columns are plotted normally.
+    - Medium-cardinality columns are plotted as Top-N + Others.
+    - Extremely high-cardinality columns are skipped safely.
     """
     validate_dataframe(df)
 
     categorical_columns = df.select_dtypes(
-        include=["object", "category", "bool"]
+        include=["object", "category", "bool", "string"]
     ).columns
 
     if len(categorical_columns) == 0:
         raise ValueError("The DataFrame does not contain categorical columns.")
 
     for column in categorical_columns:
-        if df[column].nunique(dropna=False) <= max_unique:
-            order = df[column].value_counts(dropna=False).index
-            save_path = None
+        counts = _safe_value_counts(
+            df[column],
+            max_categories=max_unique,
+        )
 
-            if save_dir:
-                save_path = Path(save_dir) / f"{column}_countplot.png"
-
-            plot_countplot(
-                df=df,
-                column=column,
-                order=order,
-                figsize=figsize,
-                save_path=save_path,
-                show=show,
-                close=close,
+        if counts is None:
+            print(
+                f"Skipping '{column}' "
+                f"(too many categories for a readable categorical plot)."
             )
+            continue
+
+        save_path = None
+
+        if save_dir:
+            save_path = Path(save_dir) / f"{column}_countplot.png"
+
+        plt.figure(figsize=figsize)
+
+        ax = sns.barplot(
+            x=counts.values,
+            y=counts.index,
+            edgecolor="black",
+        )
+
+        for container in ax.containers:
+            ax.bar_label(container, fmt="%d", padding=3, fontsize=9)
+
+        unique_count = df[column].nunique(dropna=False)
+        subtitle = f"{unique_count} unique values"
+
+        if unique_count > max_unique:
+            subtitle += f" · showing top {max_unique} + Others"
+
+        plt.text(
+            0,
+            1.02,
+            subtitle,
+            transform=plt.gca().transAxes,
+            fontsize=9,
+            alpha=0.75,
+        )
+
+        _finalize_plot(
+            title=f"Top Categories: {column}",
+            xlabel="Count",
+            ylabel="Category",
+            save_path=save_path,
+            show=show,
+            close=close,
+        )
+
+
+def plot_benchmark_results(
+    results_df: pd.DataFrame,
+    metric: str | None = None,
+    figsize: tuple[int, int] = (10, 5),
+    save_path: str | Path | None = None,
+    show: bool = True,
+    close: bool = False,
+) -> None:
+    """
+    Plot a horizontal model benchmark leaderboard.
+
+    If metric is not provided, it automatically uses:
+    - f1_score for classification results
+    - r2_score for regression results
+    """
+    validate_dataframe(results_df)
+
+    if metric is None:
+        if "f1_score" in results_df.columns:
+            metric = "f1_score"
+        elif "r2_score" in results_df.columns:
+            metric = "r2_score"
+        else:
+            raise ValueError("No supported benchmark metric found.")
+
+    if metric not in results_df.columns:
+        raise ValueError(f"Metric '{metric}' not found in results DataFrame.")
+
+    if "model" not in results_df.columns:
+        raise ValueError("Column 'model' not found in results DataFrame.")
+
+    chart_data = results_df.copy()
+    chart_data = chart_data[chart_data[metric].notna()].sort_values(metric)
+
+    if chart_data.empty:
+        raise ValueError(f"No valid values found for metric '{metric}'.")
+
+    plt.figure(figsize=figsize)
+
+    ax = sns.barplot(
+        data=chart_data,
+        x=metric,
+        y="model",
+        edgecolor="black",
+    )
+
+    for container in ax.containers:
+        ax.bar_label(container, fmt="%.3f", padding=3, fontsize=9)
+
+    _finalize_plot(
+        title="Model Benchmark Leaderboard",
+        xlabel=metric.upper(),
+        ylabel="Model",
+        save_path=save_path,
+        show=show,
+        close=close,
+    )
+
+
+def plot_regression_error_benchmark(
+    results_df: pd.DataFrame,
+    metric: str = "rmse",
+    figsize: tuple[int, int] = (10, 5),
+    save_path: str | Path | None = None,
+    show: bool = True,
+    close: bool = False,
+) -> None:
+    """
+    Plot regression error metrics such as RMSE or MAE.
+    Lower values are better.
+    """
+    validate_dataframe(results_df)
+
+    if metric not in results_df.columns:
+        raise ValueError(f"Metric '{metric}' not found in results DataFrame.")
+
+    if "model" not in results_df.columns:
+        raise ValueError("Column 'model' not found in results DataFrame.")
+
+    chart_data = results_df.copy()
+    chart_data = chart_data[chart_data[metric].notna()].sort_values(
+        metric,
+        ascending=False,
+    )
+
+    if chart_data.empty:
+        raise ValueError(f"No valid values found for metric '{metric}'.")
+
+    plt.figure(figsize=figsize)
+
+    ax = sns.barplot(
+        data=chart_data,
+        x=metric,
+        y="model",
+        edgecolor="black",
+    )
+
+    for container in ax.containers:
+        ax.bar_label(container, fmt="%.3f", padding=3, fontsize=9)
+
+    _finalize_plot(
+        title=f"Regression Error Benchmark ({metric.upper()})",
+        xlabel=f"{metric.upper()} · lower is better",
+        ylabel="Model",
+        save_path=save_path,
+        show=show,
+        close=close,
+    )

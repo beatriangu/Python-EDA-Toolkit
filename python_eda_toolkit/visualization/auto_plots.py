@@ -33,6 +33,13 @@ MAX_CORRELATION_COLUMNS = 15
 MAX_CATEGORICAL_COLUMNS = 6
 MAX_CATEGORIES = 15
 
+# Categorical visualization thresholds
+# - Small categoricals: plot all categories.
+# - Medium categoricals: plot top-N plus an "Others" bucket.
+# - Very high-cardinality categoricals: skip to keep reports readable and fast.
+MAX_UNIQUE_FOR_FULL_PLOT = 30
+MAX_UNIQUE_FOR_SKIP = 1_000
+
 SAVE_DPI = 180
 
 
@@ -632,6 +639,16 @@ def plot_categorical_distributions_auto(
     max_columns: int = MAX_CATEGORICAL_COLUMNS,
     max_categories: int = MAX_CATEGORIES,
 ) -> bool:
+    """
+    Plot readable categorical distributions automatically.
+
+    Behavior
+    --------
+    - Small categorical columns are plotted completely.
+    - Medium-cardinality columns show top-N categories plus "Others".
+    - Very high-cardinality columns are skipped to avoid unreadable plots,
+      memory pressure and oversized HTML reports.
+    """
     sampled_df = _safe_sample(
         df,
         max_rows=MAX_ROWS_FOR_CATEGORICAL,
@@ -645,21 +662,54 @@ def plot_categorical_distributions_auto(
     if not selected_columns:
         return False
 
-    fig, axes = plt.subplots(
-        nrows=len(selected_columns),
-        ncols=1,
-        figsize=(12, max(4, len(selected_columns) * 4)),
-    )
+    plot_data: list[tuple[str, pd.Series, int, bool]] = []
 
-    if len(selected_columns) == 1:
-        axes = [axes]
+    for column in selected_columns:
+        unique_count = int(sampled_df[column].nunique(dropna=False))
 
-    for ax, column in zip(axes, selected_columns):
-        counts = _top_categories(
-            sampled_df[column],
-            max_categories=max_categories,
+        if unique_count > MAX_UNIQUE_FOR_SKIP:
+            _print_skip(
+                f"categorical plot for '{column}' "
+                f"(too many unique values: {unique_count})"
+            )
+            continue
+
+        value_counts = (
+            sampled_df[column]
+            .astype("string")
+            .fillna("Missing")
+            .value_counts(dropna=False)
         )
 
+        uses_top_n = unique_count > MAX_UNIQUE_FOR_FULL_PLOT
+
+        if uses_top_n:
+            counts = value_counts.head(max_categories).copy()
+            others_count = int(value_counts.iloc[max_categories:].sum())
+
+            if others_count > 0:
+                counts.loc["Others"] = others_count
+        else:
+            counts = value_counts.copy()
+
+        if counts.empty:
+            continue
+
+        plot_data.append((column, counts, unique_count, uses_top_n))
+
+    if not plot_data:
+        return False
+
+    fig, axes = plt.subplots(
+        nrows=len(plot_data),
+        ncols=1,
+        figsize=(12, max(4, len(plot_data) * 4.2)),
+    )
+
+    if len(plot_data) == 1:
+        axes = [axes]
+
+    for ax, (column, counts, unique_count, uses_top_n) in zip(axes, plot_data):
         sns.barplot(
             x=counts.values,
             y=counts.index,
@@ -667,13 +717,38 @@ def plot_categorical_distributions_auto(
             edgecolor="black",
         )
 
+        title = f"Top Categories: {_pretty_name(column)}"
+        subtitle = f"{unique_count} unique value(s)"
+
+        if uses_top_n:
+            subtitle += f" · showing top {max_categories} + Others"
+
         ax.set_title(
-            f"Top Categories: {_pretty_name(column)}",
+            title,
             fontsize=13,
             fontweight="bold",
+            pad=18,
         )
+
+        ax.text(
+            0,
+            1.01,
+            subtitle,
+            transform=ax.transAxes,
+            fontsize=9,
+            color="dimgray",
+        )
+
         ax.set_xlabel("Count")
         ax.set_ylabel("Category")
+
+        for container in ax.containers:
+            ax.bar_label(
+                container,
+                fmt="%d",
+                padding=3,
+                fontsize=8,
+            )
 
     plt.tight_layout()
 
@@ -683,7 +758,6 @@ def plot_categorical_distributions_auto(
     )
 
     return True
-
 
 # =========================================================
 # RELATIONSHIP PLOTS

@@ -16,7 +16,7 @@ This package is designed to support:
 # HTML REPORT GENERATION
 # =========================================================
 
-from .html_report import (
+from .html_report2 import (
     generate_html_report,
 )
 
